@@ -25,6 +25,8 @@ Thumbs.db
 .env.local
 .env.*.local
 
+# Note: .env.template is safe to commit (contains no real credentials)
+
 # Temporary files
 temp/
 tmp/

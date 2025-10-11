@@ -1,0 +1,85 @@
+name: 'Terraform - Staging'
+
+on:
+  push:
+    branches: [ main, master ]
+    paths:
+      - 'environments/staging/**'
+      - 'modules/**'
+  workflow_dispatch:
+    inputs:
+      action:
+        description: 'Terraform action to perform'
+        required: true
+        default: 'plan'
+        type: choice
+        options:
+        - plan
+        - apply
+        - destroy
+
+env:
+  ARM_USE_MSI: false
+  ARM_SKIP_PROVIDER_REGISTRATION: false
+  TF_VAR_environment: staging
+
+jobs:
+  terraform:
+    name: 'Terraform Staging Environment'
+    runs-on: ubuntu-latest
+    environment: staging
+    
+    defaults:
+      run:
+        shell: bash
+        working-directory: ./environments/staging
+
+    steps:
+    - name: Checkout
+      uses: actions/checkout@v4
+
+    - name: Setup Terraform
+      uses: hashicorp/setup-terraform@v3
+      with:
+        terraform_version: ~1.9.0
+
+    - name: Azure Login
+      uses: azure/login@v1
+      with:
+        creds: ${{ secrets.AZURE_CREDENTIALS }}
+
+    - name: Terraform Format Check
+      run: terraform fmt -check -recursive
+
+    - name: Terraform Init
+      run: terraform init
+
+    - name: Terraform Validate
+      run: terraform validate
+
+    - name: Terraform Plan
+      id: plan
+      run: |
+        terraform plan -detailed-exitcode -out=tfplan
+        echo "plan_exitcode=$?" >> $GITHUB_OUTPUT
+
+    - name: Terraform Apply
+      if: (github.event_name == 'workflow_dispatch' && github.event.inputs.action == 'apply') || 
+          (github.event_name == 'push' && steps.plan.outputs.plan_exitcode == '2')
+      run: terraform apply -auto-approve tfplan
+
+    - name: Terraform Destroy
+      if: github.event_name == 'workflow_dispatch' && github.event.inputs.action == 'destroy'
+      run: terraform destroy -auto-approve
+
+    - name: Post Deployment Summary
+      if: success()
+      run: |
+        echo "## 🎯 Staging Deployment Complete" >> $GITHUB_STEP_SUMMARY
+        echo "" >> $GITHUB_STEP_SUMMARY
+        echo "**Environment:** Staging" >> $GITHUB_STEP_SUMMARY
+        echo "**Action:** ${{ github.event.inputs.action || 'apply' }}" >> $GITHUB_STEP_SUMMARY
+        echo "**Trigger:** ${{ github.event_name }}" >> $GITHUB_STEP_SUMMARY
+        echo "**Commit:** ${{ github.sha }}" >> $GITHUB_STEP_SUMMARY
+        echo "" >> $GITHUB_STEP_SUMMARY
+        echo "Ready for production deployment! 🚀" >> $GITHUB_STEP_SUMMARY

@@ -19,9 +19,10 @@ terraform {
   backend "azurerm" {
     # Configure backend for prod environment
     resource_group_name  = "terraform-state-rg-prod"
-    storage_account_name = "tfstateprodXXXXXX"  # Replace with actual storage account
+    storage_account_name = "tfstateprod185873"
     container_name       = "tfstate"
     key                  = "prod/aiml-lz.tfstate"
+    use_azuread_auth     = true  # Use Azure AD authentication instead of storage keys
   }
 }
 

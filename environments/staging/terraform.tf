@@ -19,9 +19,10 @@ terraform {
   backend "azurerm" {
     # Configure backend for staging environment
     resource_group_name  = "terraform-state-rg-staging"
-    storage_account_name = "tfstatestagingXXXXXX"  # Replace with actual storage account
+    storage_account_name = "tfstatestaging185813"
     container_name       = "tfstate"
     key                  = "staging/aiml-lz.tfstate"
+    use_azuread_auth     = true  # Use Azure AD authentication instead of storage keys
   }
 }
 

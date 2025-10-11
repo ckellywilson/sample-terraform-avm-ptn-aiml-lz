@@ -26,17 +26,36 @@ az group create --name "$RG_NAME" --location "$LOCATION"
 STORAGE_NAME="tfstate${ENVIRONMENT}$(date +%s | tail -c 7)"
 echo "Creating storage account: $STORAGE_NAME"
 
-# Create storage account
+# Create storage account with Azure AD authentication
 az storage account create \
     --resource-group "$RG_NAME" \
     --name "$STORAGE_NAME" \
     --sku Standard_LRS \
-    --encryption-services blob
+    --encryption-services blob \
+    --allow-blob-public-access false \
+    --default-action Allow
 
-# Create container
+# Get the current user/service principal ID
+CURRENT_USER_ID=$(az account show --query user.name -o tsv)
+echo "Current authenticated user/service principal: $CURRENT_USER_ID"
+
+# Assign Storage Blob Data Contributor role to the service principal for this storage account
+echo "Assigning Storage Blob Data Contributor role..."
+az role assignment create \
+    --assignee "$CURRENT_USER_ID" \
+    --role "Storage Blob Data Contributor" \
+    --scope "/subscriptions/$SUBSCRIPTION_ID/resourceGroups/$RG_NAME/providers/Microsoft.Storage/storageAccounts/$STORAGE_NAME"
+
+# Wait a moment for role assignment to propagate
+echo "Waiting for role assignment to propagate..."
+sleep 10
+
+# Create container using Azure AD authentication
+echo "Creating storage container with Azure AD authentication..."
 az storage container create \
     --name tfstate \
-    --account-name "$STORAGE_NAME"
+    --account-name "$STORAGE_NAME" \
+    --auth-mode login
 
 echo ""
 echo "✅ Backend setup complete!"
