@@ -2,6 +2,15 @@
 
 🚀 **Production-ready Azure AI/ML infrastructure with automated CI/CD pipelines**
 
+## 🎯 Quick Decision Guide
+
+**New to Azure Landing Zones?** → Start with [Standalone Application](examples/standalone-application/)  
+**Have existing hub infrastructure?** → Use [Cross-Subscription Hub-Spoke](examples/cross-subscription-hub-spoke/)  
+**Need to deploy hub first?** → Deploy [Hub Connectivity](examples/hub-connectivity-deployment/) then spoke  
+**Want simple hub-spoke?** → Use [Single-Subscription Hub-Spoke](examples/single-subscription-hub-spoke/)  
+
+📖 **Full scenario guidance**: [POC-SCENARIOS.md](POC-SCENARIOS.md)
+
 ## 📋 What This Repository Provides
 
 - **Multi-Environment Setup**: Separate dev, staging, and prod configurations
@@ -39,11 +48,73 @@ This implementation follows the Azure AI/ML Landing Zone pattern:
 
 ## 🚀 Quick Start Guide
 
-Choose your deployment method:
+Choose your deployment scenario based on your organizational needs:
 
-### 🖥️ Local Development Setup
+## 📋 Deployment Scenarios
 
-Perfect for development, testing, and learning.
+### 🏢 **Scenario 1: Cross-Subscription Hub-Spoke** ⭐ **RECOMMENDED FOR ENTERPRISE**
+Perfect for large organizations following Azure Landing Zone best practices.
+
+**Architecture**: Hub (Connectivity) + Spoke (Application) subscriptions  
+**Use Cases**: Enterprise production, regulated industries, multi-tenant platforms  
+**Features**: Centralized governance, cost optimization, hybrid connectivity  
+
+**Deployment Steps**:
+```bash
+# Step 1: Deploy Hub Infrastructure (Platform Team)
+cd examples/hub-connectivity-deployment
+cp terraform.tfvars.example terraform.tfvars
+# Edit terraform.tfvars with your hub subscription ID
+terraform init && terraform apply
+
+# Step 2: Deploy AI/ML Spoke (Application Team)  
+cd ../cross-subscription-hub-spoke
+cp terraform.tfvars.example terraform.tfvars
+# Edit terraform.tfvars with spoke subscription ID and hub outputs
+terraform init && terraform apply
+```
+
+### 🏬 **Scenario 2: Single-Subscription Hub-Spoke**
+Good for mid-size organizations testing hub-spoke concepts.
+
+**Architecture**: Hub and spoke within same subscription  
+**Use Cases**: Testing hub-spoke patterns, limited scope deployments  
+**Features**: Simplified RBAC, reduced complexity  
+
+**Deployment Steps**:
+```bash
+cd examples/single-subscription-hub-spoke
+cp terraform.tfvars.example terraform.tfvars
+terraform init && terraform apply
+```
+
+### 🏪 **Scenario 3: Standalone Application**  
+Ideal for independent workloads or edge deployments.
+
+**Architecture**: Self-contained deployment  
+**Use Cases**: Edge deployments, pilot projects, isolated workloads  
+**Features**: Complete independence, quick setup  
+
+**Deployment Steps**:
+```bash
+cd examples/standalone-application
+cp terraform.tfvars.example terraform.tfvars
+terraform init && terraform apply
+```
+
+## 📊 Scenario Comparison
+
+| Aspect | Cross-Subscription Hub-Spoke | Single-Subscription Hub-Spoke | Standalone Application |
+|--------|------------------------------|-------------------------------|------------------------|
+| **Complexity** | High | Medium | Low |
+| **Enterprise Readiness** | ✅ Production Ready | 🟡 Limited Scale | ❌ POC Only |
+| **Cost Efficiency** | ✅ Optimized | 🟡 Moderate | ❌ Higher per workload |
+| **Governance** | ✅ Centralized | 🟡 Subscription-level | ❌ Workload-level |
+| **Setup Time** | ❌ Complex | 🟡 Moderate | ✅ Quick |
+
+### 🖥️ Multi-Environment Setup (Optional)
+
+For organizations wanting full DevOps lifecycle management:
 
 #### Step 1: Prerequisites
 ```bash
@@ -75,7 +146,8 @@ source ./scripts/setup-local-auth.sh
 
 #### Step 4: Deploy Infrastructure
 ```bash
-# Start with development environment
+# Choose your deployment scenario first (see scenarios above)
+# Then deploy to development environment
 cd environments/dev
 terraform init
 terraform plan
@@ -207,6 +279,11 @@ State files are automatically managed:
 
 | Document | Description |
 |----------|-------------|
+| [POC Scenarios](POC-SCENARIOS.md) | Complete deployment scenarios guide |
+| [Hub Connectivity](examples/hub-connectivity-deployment/README.md) | Azure Verified Module hub deployment |
+| [Cross-Subscription Hub-Spoke](examples/cross-subscription-hub-spoke/README.md) | Enterprise hub-spoke pattern |
+| [Single-Subscription Hub-Spoke](examples/single-subscription-hub-spoke/README.md) | Simplified hub-spoke pattern |
+| [Standalone Application](examples/standalone-application/README.md) | Independent deployment pattern |
 | [Authentication Guide](docs/AUTHENTICATION.md) | Detailed authentication setup |
 | [Backend Configuration](docs/BACKEND_CONFIGURATION.md) | State management details |
 | [Security Checklist](docs/SECURITY_CHECKLIST.md) | Security best practices |
@@ -263,15 +340,41 @@ az role assignment list --assignee your-client-id --output table
 
 ---
 
+## 🎯 Choosing Your Deployment Scenario
+
+### Decision Framework
+
+**Choose Cross-Subscription Hub-Spoke if you have:**
+- Enterprise organization (1000+ users)
+- High compliance requirements (Banking, Healthcare)
+- Multiple AI/ML workloads (>5)
+- Advanced platform teams
+- Need for centralized governance
+
+**Choose Single-Subscription Hub-Spoke if you have:**
+- Mid-size organization (100-1000 users)  
+- Medium compliance requirements
+- Few AI/ML workloads (2-5)
+- Growing DevOps capabilities
+- Want to test hub-spoke concepts
+
+**Choose Standalone Application if you have:**
+- Small organization (<100 users)
+- Low compliance requirements
+- Single AI/ML workload
+- Application team ownership
+- Edge/remote deployment needs
+
 ## 📈 Next Steps
 
 After successful deployment:
 
-1. **Configure Monitoring**: Set up alerts and dashboards
-2. **Access Management**: Configure user access and permissions
-3. **Model Deployment**: Deploy your AI/ML models to AI Foundry
-4. **Integration**: Connect applications to the landing zone services
-5. **Scaling**: Adjust resource sizing based on usage patterns
+1. **Verify Deployment**: Test AI Foundry connectivity and DNS resolution
+2. **Configure Monitoring**: Set up alerts and dashboards
+3. **Access Management**: Configure user access and permissions
+4. **Model Deployment**: Deploy your AI/ML models to AI Foundry
+5. **Integration**: Connect applications to the landing zone services
+6. **Scaling**: Adjust resource sizing based on usage patterns
 
 ---
 

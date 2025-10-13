@@ -1,3 +1,6 @@
+# Enhanced AI/ML Landing Zone Module - Multi-Pattern Support
+# Supports: hub-spoke (same subscription), cross-subscription, and standalone patterns
+
 # Get current IP address for firewall rules
 data "http" "ip" {
   url = "https://api.ipify.org/"
@@ -37,15 +40,22 @@ locals {
       Environment = var.environment
       Project     = var.project_name
       ManagedBy   = "Terraform"
+      Pattern     = var.deployment_pattern
     },
     var.tags
   )
+  
+  # Determine if we need to create a hub or use existing one
+  create_hub = var.deployment_pattern == "hub-spoke" && var.existing_hub_config.hub_vnet_id == null
+  use_existing_hub = var.deployment_pattern == "hub-spoke" && var.existing_hub_config.hub_vnet_id != null
+  standalone_mode = var.deployment_pattern == "standalone"
 }
 
-# Example Hub Module for network foundation
+# Example Hub Module for network foundation (only in hub-spoke mode without existing hub)
 module "example_hub" {
+  count   = local.create_hub ? 1 : 0
   source  = "Azure/terraform-azurerm-avm-ptn-aiml-landing-zone/azurerm//modules/example_hub_vnet"
-  version = "~> 1.0"  # Use appropriate version
+  version = "~> 1.0"
   
   deployer_ip_address = "${data.http.ip.response_body}/32"
   location            = local.environment_config.location
@@ -60,23 +70,44 @@ module "example_hub" {
   tags             = local.merged_tags
 }
 
+# Data sources for existing hub resources (cross-subscription scenario)
+data "azurerm_virtual_network" "existing_hub" {
+  count               = local.use_existing_hub ? 1 : 0
+  name                = split("/", var.existing_hub_config.hub_vnet_id)[8]
+  resource_group_name = split("/", var.existing_hub_config.hub_vnet_id)[4]
+}
+
 # Main AI/ML Landing Zone Module
 module "ai_ml_landing_zone" {
   source  = "Azure/terraform-azurerm-avm-ptn-aiml-landing-zone/azurerm"
-  version = "~> 1.0"  # Use appropriate version
+  version = "~> 1.0"
   
   location            = local.environment_config.location
   resource_group_name = local.resource_names.resource_group
   
-  vnet_definition = {
+  # VNet definition varies by pattern
+  vnet_definition = local.standalone_mode ? {
     name          = local.resource_names.vnet
     address_space = local.environment_config.vnet_address_space
-    dns_servers   = [for key, value in module.example_hub.dns_resolver_inbound_ip_addresses : value]
+  } : local.use_existing_hub ? {
+    name          = local.resource_names.vnet
+    address_space = local.environment_config.vnet_address_space
+    dns_servers   = var.existing_hub_config.hub_dns_servers
     
     hub_vnet_peering_definition = {
-      peer_vnet_resource_id = module.example_hub.virtual_network_resource_id
-      firewall_ip_address   = module.example_hub.firewall_ip_address
+      peer_vnet_resource_id = var.existing_hub_config.hub_vnet_id
+      firewall_ip_address   = var.existing_hub_config.hub_firewall_ip
     }
+  } : {
+    # Default hub-spoke with created hub
+    name          = local.resource_names.vnet
+    address_space = local.environment_config.vnet_address_space
+    dns_servers   = local.create_hub ? [for key, value in module.example_hub[0].dns_resolver_inbound_ip_addresses : value] : []
+    
+    hub_vnet_peering_definition = local.create_hub ? {
+      peer_vnet_resource_id = module.example_hub[0].virtual_network_resource_id
+      firewall_ip_address   = module.example_hub[0].firewall_ip_address
+    } : null
   }
   
   # AI Foundry Configuration
@@ -145,7 +176,7 @@ module "ai_ml_landing_zone" {
     }
   }
   
-  # Application Gateway Configuration
+  # Application Gateway Configuration (only for production)
   app_gateway_definition = var.environment == "prod" ? {
     backend_address_pools = {
       example_pool = {
@@ -209,13 +240,16 @@ module "ai_ml_landing_zone" {
     enable_diagnostic_settings = var.enable_diagnostic_logs
   }
   
-  # Private DNS Zones
-  private_dns_zones = {
-    existing_zones_resource_group_resource_id = module.example_hub.resource_group_resource_id
-  }
+  # Private DNS Zones configuration varies by pattern
+  private_dns_zones = local.standalone_mode ? {} : local.use_existing_hub ? {
+    existing_zones_resource_group_resource_id = var.existing_hub_config.hub_dns_zones_resource_group
+  } : local.create_hub ? {
+    existing_zones_resource_group_resource_id = module.example_hub[0].resource_group_resource_id
+  } : {}
   
+  # Platform landing zone flag
+  flag_platform_landing_zone = !local.standalone_mode
   enable_telemetry           = var.enable_telemetry
-  flag_platform_landing_zone = true   # Enable platform landing zone integration
   tags                       = local.merged_tags
   
   depends_on = [module.example_hub]
