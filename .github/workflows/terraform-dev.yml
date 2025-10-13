@@ -1,12 +1,13 @@
 name: 'Terraform - Development'
 
 on:
-  pull_request:
-    branches: [ main, master ]
-    paths:
-      - 'environments/dev/**'
-      - 'modules/**'
-      - '.github/workflows/terraform-dev.yml'
+  # Disabled automatic triggers - manual execution only
+  # pull_request:
+  #   branches: [ main, master ]
+  #   paths:
+  #     - 'environments/dev/**'
+  #     - 'modules/**'
+  #     - '.github/workflows/terraform-dev.yml'
   workflow_dispatch:
     inputs:
       action:
