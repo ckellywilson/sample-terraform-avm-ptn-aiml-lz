@@ -1,0 +1,46 @@
+variable "location" {
+  type        = string
+  default     = "East US 2"
+  description = "Azure region where all resources should be deployed."
+}
+
+variable "name_prefix" {
+  type        = string
+  default     = "aiml"
+  description = "Prefix for all resource names. Must be 10 characters or less and alphanumeric."
+  
+  validation {
+    condition = var.name_prefix == null || (
+      length(var.name_prefix) <= 10 &&
+      can(regex("^[a-z0-9]+$", var.name_prefix))
+    )
+    error_message = "The name_prefix must contain only lowercase alphanumeric characters and be 10 characters or less."
+  }
+}
+
+variable "ai_lz_vnet_address_space" {
+  type        = string
+  default     = "192.168.0.0/22"
+  description = "Address space for the AI/ML landing zone virtual network. Larger address space for standalone deployment."
+}
+
+variable "enable_telemetry" {
+  type        = bool
+  default     = true
+  description = <<DESCRIPTION
+This variable controls whether or not telemetry is enabled for the module.
+For more information see <https://aka.ms/avm/telemetryinfo>.
+If it is set to false, then no telemetry will be collected.
+DESCRIPTION
+}
+
+variable "tags" {
+  type        = map(string)
+  default = {
+    Environment = "dev"
+    Project     = "ai-ml-landing-zone"
+    ManagedBy   = "terraform"
+    Pattern     = "standalone"
+  }
+  description = "Tags to be applied to all resources."
+}

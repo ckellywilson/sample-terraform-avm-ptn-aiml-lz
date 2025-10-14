@@ -1,159 +1,181 @@
-# Azure AI/ML Landing Zone - Multi-Environment Setup
+# Azure AI/ML Landing Zone
 
-🚀 **Production-ready Azure AI/ML infrastructure with automated CI/CD pipelines**
+🚀 **Production-ready Azure AI/ML infrastructure following Azure Verified Module (AVM) patterns**
 
 ## 🎯 Quick Decision Guide
 
-**New to Azure Landing Zones?** → Start with [Standalone Application](examples/standalone-application/)  
-**Have existing hub infrastructure?** → Use [Cross-Subscription Hub-Spoke](examples/cross-subscription-hub-spoke/)  
-**Need to deploy hub first?** → Deploy [Hub Connectivity](examples/hub-connectivity-deployment/) then spoke  
-**Want simple hub-spoke?** → Use [Single-Subscription Hub-Spoke](examples/single-subscription-hub-spoke/)  
+**Learning or Development?** → Start with [Default Example](examples/default/) (creates hub + AI/ML LZ)  
+**Self-contained workload?** → Use [Standalone Example](examples/standalone/) (no hub needed)  
+**Have existing platform hub?** → Use [With Existing Hub](examples/with-existing-hub/) (enterprise)  
 
-📖 **Full scenario guidance**: [POC-SCENARIOS.md](POC-SCENARIOS.md)
+📖 **Complete guidance**: [Examples Documentation](examples/README.md) | [Deployment Scenarios](POC-SCENARIOS.md)
 
 ## 📋 What This Repository Provides
 
-- **Multi-Environment Setup**: Separate dev, staging, and prod configurations
-- **Secure Authentication**: Service Principal for local dev, Managed Identity for CI/CD
-- **State Management**: Secure Azure Storage backend with Azure AD authentication
-- **CI/CD Ready**: Pre-configured pipelines for Azure DevOps and GitHub Actions
-- **Best Practices**: Security, naming conventions, and infrastructure as code
+- **Scenario-Based Examples**: Clear deployment patterns for different use cases
+- **AVM Compliance**: Follows Azure Verified Module best practices
+- **Production-Ready**: Complete configurations with security and monitoring
+- **Comprehensive Documentation**: Step-by-step guides and troubleshooting
+- **Enterprise Integration**: Support for existing platform landing zones
 
 ## 🏗️ Architecture
 
-This implementation follows the Azure AI/ML Landing Zone pattern:
+This implementation follows the Azure AI/ML Landing Zone pattern with multiple deployment scenarios:
 
-- **AI Foundry Hub**: Central AI/ML workspace with GPT-4o model deployment
-- **Network Foundation**: Hub-spoke topology with private endpoints
-- **Supporting Services**: Container Registry, Cosmos DB, Key Vault, Storage, AI Search
-- **Security**: Private DNS zones, VNet integration, Azure AD authentication
-- **Monitoring**: Application Insights and Log Analytics integration
+### Core AI/ML Services
+- **Storage Account**: Datasets, models, and artifacts storage
+- **Key Vault**: Secure credential and key management
+- **AI Services**: Cognitive Services for AI model hosting
+- **AI Search**: Vector search and knowledge mining capabilities
+- **Cosmos DB**: NoSQL database for AI applications
+- **Application Insights**: Application performance monitoring
+
+### Network Integration Options
+- **Hub-Spoke with Example Hub**: Complete development environment
+- **Standalone**: Self-contained single VNet deployment
+- **Enterprise Hub Integration**: Connect to existing platform infrastructure
 
 ## 📁 Repository Structure
 
 ```
-├── environments/          # Environment-specific configurations
-│   ├── dev/              # Development environment
-│   ├── staging/          # Staging environment
-│   └── prod/             # Production environment
+├── examples/              # Deployment scenarios (AVM pattern)
+│   ├── default/          # Hub-spoke with example hub
+│   ├── standalone/       # Self-contained deployment
+│   └── with-existing-hub/ # Enterprise hub integration
 ├── modules/              # Reusable Terraform modules
 │   └── ai-ml-landing-zone/
-├── scripts/              # Automation scripts
-├── .github/workflows/    # GitHub Actions pipelines
-├── azure-pipelines/      # Azure DevOps pipelines
-└── docs/                 # Documentation
+├── scripts/              # Automation and setup scripts
+├── azure-pipelines/      # CI/CD pipeline examples
+└── docs/                 # Additional documentation
 ```
 
 ---
 
 ## 🚀 Quick Start Guide
 
-Choose your deployment scenario based on your organizational needs:
+Choose your deployment scenario based on your needs:
 
 ## 📋 Deployment Scenarios
 
-### 🏢 **Scenario 1: Cross-Subscription Hub-Spoke** ⭐ **RECOMMENDED FOR ENTERPRISE**
-Perfect for large organizations following Azure Landing Zone best practices.
+### �️ **Default Example** ⭐ **RECOMMENDED FOR LEARNING**
+Complete deployment with example hub and AI/ML landing zone integrated via VNet peering.
 
-**Architecture**: Hub (Connectivity) + Spoke (Application) subscriptions  
-**Use Cases**: Enterprise production, regulated industries, multi-tenant platforms  
-**Features**: Centralized governance, cost optimization, hybrid connectivity  
+**Architecture**: Example Hub + AI/ML Landing Zone with peering  
+**Use Cases**: Development, learning, proof-of-concept, testing  
+**Features**: Complete setup, private endpoints, automatic integration  
 
 **Deployment Steps**:
 ```bash
-# Step 1: Deploy Hub Infrastructure (Platform Team)
-cd examples/hub-connectivity-deployment
+cd examples/default
 cp terraform.tfvars.example terraform.tfvars
-# Edit terraform.tfvars with your hub subscription ID
-terraform init && terraform apply
-
-# Step 2: Deploy AI/ML Spoke (Application Team)  
-cd ../cross-subscription-hub-spoke
-cp terraform.tfvars.example terraform.tfvars
-# Edit terraform.tfvars with spoke subscription ID and hub outputs
+# Edit terraform.tfvars with your configuration
 terraform init && terraform apply
 ```
 
-### 🏬 **Scenario 2: Single-Subscription Hub-Spoke**
-Good for mid-size organizations testing hub-spoke concepts.
+### 🚀 **Standalone Example**
+Self-contained AI/ML environment without hub network dependencies.
 
-**Architecture**: Hub and spoke within same subscription  
-**Use Cases**: Testing hub-spoke patterns, limited scope deployments  
-**Features**: Simplified RBAC, reduced complexity  
+**Architecture**: Single VNet with all AI/ML services  
+**Use Cases**: Isolated workloads, rapid prototyping, small teams  
+**Features**: Simple setup, public access, cost-optimized  
 
 **Deployment Steps**:
 ```bash
-cd examples/single-subscription-hub-spoke
+cd examples/standalone
 cp terraform.tfvars.example terraform.tfvars
 terraform init && terraform apply
 ```
 
-### 🏪 **Scenario 3: Standalone Application**  
-Ideal for independent workloads or edge deployments.
+### � **With Existing Hub Example** ⭐ **RECOMMENDED FOR ENTERPRISE**
+Integrates AI/ML landing zone with existing platform hub infrastructure.
 
-**Architecture**: Self-contained deployment  
-**Use Cases**: Edge deployments, pilot projects, isolated workloads  
-**Features**: Complete independence, quick setup  
+**Architecture**: AI/ML LZ peered to existing hub network  
+**Use Cases**: Enterprise production, existing platform landing zones  
+**Features**: Private endpoints, hub DNS integration, enterprise security  
 
 **Deployment Steps**:
 ```bash
-cd examples/standalone-application
+cd examples/with-existing-hub
 cp terraform.tfvars.example terraform.tfvars
+# Edit terraform.tfvars with existing hub details
 terraform init && terraform apply
 ```
 
 ## 📊 Scenario Comparison
 
-| Aspect | Cross-Subscription Hub-Spoke | Single-Subscription Hub-Spoke | Standalone Application |
-|--------|------------------------------|-------------------------------|------------------------|
-| **Complexity** | High | Medium | Low |
-| **Enterprise Readiness** | ✅ Production Ready | 🟡 Limited Scale | ❌ POC Only |
-| **Cost Efficiency** | ✅ Optimized | 🟡 Moderate | ❌ Higher per workload |
-| **Governance** | ✅ Centralized | 🟡 Subscription-level | ❌ Workload-level |
-| **Setup Time** | ❌ Complex | 🟡 Moderate | ✅ Quick |
+| Aspect | Default | Standalone | With Existing Hub |
+|--------|---------|------------|-------------------|
+| **Complexity** | Medium | Low | High |
+| **Enterprise Readiness** | 🟡 Dev/Test | ❌ Dev Only | ✅ Production Ready |
+| **Hub Dependency** | ✅ Creates Example | ❌ None | ✅ Uses Existing |
+| **Private Endpoints** | ✅ Yes | ❌ Public Access | ✅ Yes |
+| **Setup Time** | 🟡 Moderate | ✅ Quick | ❌ Complex |
+| **Prerequisites** | None | None | Existing Hub Network |
 
-### 🖥️ Multi-Environment Setup (Optional)
+## 🖥️ Multi-Environment Deployments
 
-For organizations wanting full DevOps lifecycle management:
+Each example can be deployed to different environments by customizing variables:
 
-#### Step 1: Prerequisites
+### Environment Configuration via Variables
+
+```hcl
+# Development Environment
+location    = "East US 2"
+name_prefix = "dev-aiml"
+tags = {
+  Environment = "development"
+  Project     = "ai-ml-landing-zone"
+}
+
+# Production Environment  
+location    = "West US 3"
+name_prefix = "prod-aiml"
+tags = {
+  Environment = "production"
+  Project     = "ai-ml-landing-zone"
+}
+```
+
+### Prerequisites
 ```bash
 # Ensure you have required tools
-az --version          # Azure CLI >= 2.0
+az --version          # Azure CLI >= 2.54
 terraform --version   # Terraform >= 1.9
 ```
 
-#### Step 2: Authentication Setup
+### Authentication Setup
 ```bash
-# 1. Login to Azure
+# Login to Azure
 az login
 
-# 2. Create Service Principal for local development
-# Replace 'your-subscription-id' with your actual subscription ID
+# Optional: Create Service Principal for automation
 ./scripts/create-service-principal.sh your-subscription-id
-
-# 3. Load authentication environment
 source ./scripts/setup-local-auth.sh
 ```
 
-#### Step 3: Backend Storage Setup
+### Backend Storage Setup
 ```bash
-# Create secure state storage for all environments
+# Create secure state storage for different environments
 ./scripts/setup-azure-backend.sh dev "East US 2" your-subscription-id
-./scripts/setup-azure-backend.sh staging "East US 2" your-subscription-id
-./scripts/setup-azure-backend.sh prod "East US 2" your-subscription-id
+./scripts/setup-azure-backend.sh prod "West US 3" your-subscription-id
 ```
 
-#### Step 4: Deploy Infrastructure
+### Deploy to Different Environments
 ```bash
-# Choose your deployment scenario first (see scenarios above)
-# Then deploy to development environment
-cd environments/dev
-terraform init
-terraform plan
-terraform apply
+# Choose your example and configure for environment
+cd examples/default  # or standalone, or with-existing-hub
 
-# Repeat for other environments as needed
+# Create environment-specific variable files
+cp terraform.tfvars.example terraform.tfvars.dev
+cp terraform.tfvars.example terraform.tfvars.prod
+
+# Deploy to development
+terraform init
+terraform apply -var-file="terraform.tfvars.dev"
+
+# Deploy to production (in different workspace/backend)
+terraform workspace new prod  # or use different backend
+terraform apply -var-file="terraform.tfvars.prod"
 ```
 
 ---
@@ -279,11 +301,11 @@ State files are automatically managed:
 
 | Document | Description |
 |----------|-------------|
-| [POC Scenarios](POC-SCENARIOS.md) | Complete deployment scenarios guide |
-| [Hub Connectivity](examples/hub-connectivity-deployment/README.md) | Azure Verified Module hub deployment |
-| [Cross-Subscription Hub-Spoke](examples/cross-subscription-hub-spoke/README.md) | Enterprise hub-spoke pattern |
-| [Single-Subscription Hub-Spoke](examples/single-subscription-hub-spoke/README.md) | Simplified hub-spoke pattern |
-| [Standalone Application](examples/standalone-application/README.md) | Independent deployment pattern |
+| [Examples Overview](examples/README.md) | Complete guide to all deployment scenarios |
+| [Default Example](examples/default/README.md) | Hub-spoke with example hub deployment |
+| [Standalone Example](examples/standalone/README.md) | Self-contained AI/ML environment |
+| [With Existing Hub](examples/with-existing-hub/README.md) | Enterprise hub integration |
+| [Deployment Scenarios](POC-SCENARIOS.md) | Decision framework and scenario comparison |
 | [Authentication Guide](docs/AUTHENTICATION.md) | Detailed authentication setup |
 | [Backend Configuration](docs/BACKEND_CONFIGURATION.md) | State management details |
 | [Security Checklist](docs/SECURITY_CHECKLIST.md) | Security best practices |
@@ -344,26 +366,26 @@ az role assignment list --assignee your-client-id --output table
 
 ### Decision Framework
 
-**Choose Cross-Subscription Hub-Spoke if you have:**
-- Enterprise organization (1000+ users)
-- High compliance requirements (Banking, Healthcare)
-- Multiple AI/ML workloads (>5)
-- Advanced platform teams
-- Need for centralized governance
+**Choose Default Example if you:**
+- Are learning Azure AI/ML landing zone patterns
+- Need a complete development/test environment
+- Want to understand hub-spoke integration
+- Don't have existing platform infrastructure
+- Are building proof-of-concepts
 
-**Choose Single-Subscription Hub-Spoke if you have:**
-- Mid-size organization (100-1000 users)  
-- Medium compliance requirements
-- Few AI/ML workloads (2-5)
-- Growing DevOps capabilities
-- Want to test hub-spoke concepts
+**Choose Standalone Example if you:**
+- Have an isolated AI/ML workload
+- Want the simplest deployment option
+- Are doing rapid prototyping
+- Work in a small team with limited infrastructure
+- Need edge or remote deployments
 
-**Choose Standalone Application if you have:**
-- Small organization (<100 users)
-- Low compliance requirements
-- Single AI/ML workload
-- Application team ownership
-- Edge/remote deployment needs
+**Choose With Existing Hub Example if you:**
+- Have an existing platform landing zone
+- Work in an enterprise environment
+- Need production-ready integration
+- Have multiple AI/ML workloads
+- Require centralized governance and security
 
 ## 📈 Next Steps
 

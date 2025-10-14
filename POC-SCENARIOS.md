@@ -1,61 +1,64 @@
-# Azure AI/ML Landing Zone - POC Scenarios
+# Azure AI/ML Landing Zone - Deployment Scenarios
 
-This repository demonstrates three distinct deployment patterns for Azure AI/ML Landing Zones, covering the full spectrum of organizational needs from enterprise-scale to standalone deployments.
+This repository demonstrates three distinct deployment patterns for Azure AI/ML Landing Zones, following Azure Verified Module (AVM) best practices and covering the full spectrum of organizational needs from enterprise-scale to standalone deployments.
 
 ## 🎯 Scenario Comparison Matrix
 
-| Aspect | Cross-Subscription Hub-Spoke | Single-Subscription Hub-Spoke | Standalone Application |
-|--------|------------------------------|-------------------------------|------------------------|
-| **Complexity** | High | Medium | Low |
-| **Enterprise Readiness** | ✅ Production Ready | 🟡 Limited Scale | ❌ POC Only |
-| **Cost Efficiency** | ✅ Optimized | 🟡 Moderate | ❌ Higher per workload |
-| **Governance** | ✅ Centralized | 🟡 Subscription-level | ❌ Workload-level |
-| **Isolation** | 🟡 Network segmentation | 🟡 Subnet segmentation | ✅ Complete |
-| **Setup Time** | ❌ Complex | 🟡 Moderate | ✅ Quick |
+| Aspect | Default (Example Hub) | Standalone | With Existing Hub |
+|--------|----------------------|------------|-------------------|
+| **Complexity** | Medium | Low | High |
+| **Enterprise Readiness** | 🟡 Dev/Test | ❌ Dev Only | ✅ Production Ready |
+| **Cost Efficiency** | 🟡 Moderate | ✅ Optimized | ✅ Leverages existing |
+| **Hub Dependency** | ✅ Creates example | ❌ None | ✅ Uses existing |
+| **Private Endpoints** | ✅ Yes | ❌ Public access | ✅ Yes |
+| **Setup Time** | 🟡 Moderate | ✅ Quick | ❌ Complex |
+| **Prerequisites** | None | None | Existing hub network |
 
-## Scenario 1: Cross-Subscription Hub-Spoke ⭐ **RECOMMENDED**
-- **Location**: `examples/cross-subscription-hub-spoke/`
-- **Description**: Enterprise-grade hub-spoke architecture with centralized networking
-- **Use Case**: Production enterprise deployments
-- **Key Feature**: Shared platform services across subscriptions
-- **Best For**: Large organizations, regulated industries, multi-tenant platforms
+## Scenario 1: Default Example ⭐ **RECOMMENDED FOR LEARNING**
+- **Location**: `examples/default/`
+- **Description**: Complete hub-spoke deployment with example hub network
+- **Use Case**: Development, learning, proof-of-concept, testing
+- **Key Feature**: Creates both hub and AI/ML landing zone with automatic integration
+- **Best For**: Learning Azure landing zone patterns, development environments, POCs
 
-## Scenario 2: Single Subscription Hub-Spoke
-- **Location**: `examples/single-subscription-hub-spoke/`
-- **Description**: Hub-spoke architecture within a single subscription
-- **Use Case**: Mid-size organizations or testing environments
-- **Key Feature**: Simplified management with hub benefits
-- **Best For**: Organizations testing hub-spoke patterns, limited scope deployments
+## Scenario 2: Standalone Example
+- **Location**: `examples/standalone/`
+- **Description**: Self-contained AI/ML environment with single VNet
+- **Use Case**: Isolated workloads, rapid prototyping, edge deployments
+- **Key Feature**: Complete independence with public service access
+- **Best For**: Small teams, rapid prototyping, isolated workloads, cost optimization
 
-## Scenario 3: Standalone Application
-- **Location**: `examples/standalone-application/`
-- **Description**: Self-contained deployment with no external dependencies
-- **Use Case**: Independent workloads or edge deployments
-- **Key Feature**: Complete isolation and independence
-- **Best For**: Edge deployments, pilot projects, isolated workloads
+## Scenario 3: With Existing Hub Example ⭐ **RECOMMENDED FOR ENTERPRISE**
+- **Location**: `examples/with-existing-hub/`
+- **Description**: Enterprise-grade integration with existing platform hub
+- **Use Case**: Production enterprise deployments with existing platform landing zone
+- **Key Feature**: Private endpoints and integration with existing hub infrastructure
+- **Best For**: Large organizations, production workloads, regulated industries
 
 ## 🚀 Quick Start Guide
 
-### For Enterprise Production (Recommended)
+### For Learning and Development (Recommended)
 ```bash
-# Step 1: Deploy Hub Infrastructure (if needed)
-cd examples/hub-connectivity-deployment
-terraform init && terraform apply
-
-# Step 2: Deploy AI/ML Spoke
-cd ../cross-subscription-hub-spoke
+# Complete hub-spoke setup with example hub
+cd examples/default
+cp terraform.tfvars.example terraform.tfvars
 terraform init && terraform apply
 ```
 
-### For Testing Hub-Spoke Concepts
+### For Standalone Workloads
 ```bash
-cd examples/single-subscription-hub-spoke
+# Self-contained deployment
+cd examples/standalone
+cp terraform.tfvars.example terraform.tfvars
 terraform init && terraform apply
 ```
 
-### For Standalone/Edge Deployments
+### For Enterprise Production (Existing Hub)
 ```bash
-cd examples/standalone-application
+# Integration with existing platform hub
+cd examples/with-existing-hub
+cp terraform.tfvars.example terraform.tfvars
+# Edit terraform.tfvars with existing hub details
 terraform init && terraform apply
 ```
 
@@ -63,62 +66,93 @@ terraform init && terraform apply
 
 Choose your scenario based on:
 
-1. **Organizational Size**
-   - Enterprise (1000+ users) → Cross-Subscription Hub-Spoke
-   - Mid-size (100-1000 users) → Single Subscription Hub-Spoke
-   - Small/Edge (<100 users) → Standalone
+1. **Purpose and Environment**
+   - Learning/Development → Default Example
+   - Isolated workloads → Standalone Example
+   - Enterprise production → With Existing Hub Example
 
-2. **Compliance Requirements**
-   - High (Banking, Healthcare) → Cross-Subscription Hub-Spoke
-   - Medium → Single Subscription Hub-Spoke
-   - Low → Standalone
+2. **Infrastructure Context**
+   - No existing hub → Default Example or Standalone Example
+   - Have existing platform hub → With Existing Hub Example
+   - Want complete independence → Standalone Example
 
-3. **Number of AI/ML Workloads**
-   - Multiple (>5) → Cross-Subscription Hub-Spoke
-   - Few (2-5) → Single Subscription Hub-Spoke
-   - Single → Standalone
+3. **Complexity Tolerance**
+   - Simple and quick → Standalone Example
+   - Moderate learning curve → Default Example
+   - Complex enterprise integration → With Existing Hub Example
 
-4. **Operational Maturity**
-   - Advanced Platform Teams → Cross-Subscription Hub-Spoke
-   - Growing DevOps → Single Subscription Hub-Spoke
-   - Application Teams → Standalone
+4. **Security Requirements**
+   - Basic/Development → Standalone Example (public access)
+   - Enhanced → Default Example (private endpoints)
+   - Enterprise-grade → With Existing Hub Example (full enterprise integration)
 
 ## 🔧 Configuration Patterns
 
-### Cross-Subscription Hub-Spoke:
+### Default Example:
 ```hcl
-flag_platform_landing_zone = true
-# Hub resources in connectivity subscription
-# Application resources in workload subscription
-# Enterprise-grade separation
+# Creates example hub network
+hub_vnet_address_space = "10.10.0.0/24"
+ai_lz_vnet_address_space = "192.168.0.0/23"
+
+# Automatic VNet peering and private endpoints
+# Complete hub-spoke integration for learning
 ```
 
-### Single Subscription Hub-Spoke:
+### Standalone Example:
 ```hcl
-flag_platform_landing_zone = true
-# Both hub and spoke in same subscription
-# Simpler RBAC and billing model
+# Self-contained single VNet
+ai_lz_vnet_address_space = "192.168.0.0/22"  # Larger address space
+
+# Public access enabled for simplicity
+# No hub dependencies or external integrations
 ```
 
-### Standalone Application:
+### With Existing Hub Example:
 ```hcl
-flag_platform_landing_zone = false
-# All resources self-contained in one subscription
-# No external dependencies
+# References existing hub infrastructure
+existing_hub_resource_group_name = "rg-connectivity-eastus2"
+existing_hub_vnet_name = "vnet-hub-eastus2"
+
+# Optional: Use existing private DNS zones
+existing_private_dns_zones = {
+  resource_group_name = "rg-connectivity-eastus2"
+  blob_zone_name      = "privatelink.blob.core.windows.net"
+  # ... other existing zones
+}
 ```
 
 ## Implementation Status
-- ✅ **Hub Connectivity Deployment**: Separate Azure Verified Module deployment for hub infrastructure
-- ✅ **Cross-Subscription Hub-Spoke**: Complete implementation with comprehensive documentation
-- ✅ **Single-Subscription Hub-Spoke**: Complete implementation with architectural guidance
-- ✅ **Standalone Application**: Complete implementation for independent deployments
+- ✅ **Default Example**: Complete implementation with example hub and comprehensive documentation
+- ✅ **Standalone Example**: Complete self-contained implementation for independent deployments
+- ✅ **With Existing Hub Example**: Complete enterprise integration with existing platform infrastructure
 
-All scenarios are ready for POC deployment and testing.
+All scenarios are production-ready and follow Azure Verified Module best practices.
 
-## Hub Infrastructure
-For customers without existing hub infrastructure, use the **separate hub deployment**:
-- **Location**: `examples/hub-connectivity-deployment/`
-- **Purpose**: Deploy Azure Landing Zone connectivity hub using Azure Verified Modules
-- **Deploy First**: Always deploy hub before spoke workloads
-- **Features**: Azure Firewall, Private DNS Zones, Hub VNet, Network Security
+## Architecture Overview
+
+### Default Example Architecture
+```
+Example Hub (10.10.0.0/24) ←→ AI/ML LZ (192.168.0.0/23)
+├── Hub subnet                 ├── Private endpoints subnet
+└── Basic connectivity         ├── Compute subnet
+                              └── Private AI services
+```
+
+### Standalone Example Architecture
+```
+AI/ML Landing Zone (192.168.0.0/22)
+├── Private endpoints subnet
+├── Compute subnet
+├── Web subnet
+└── Public AI services (dev-friendly)
+```
+
+### With Existing Hub Example Architecture
+```
+Existing Hub (10.0.0.0/16) ←→ AI/ML LZ (192.168.0.0/23)
+├── Firewall/NVA              ├── Private endpoints subnet
+├── DNS servers               ├── Compute subnet
+├── Private DNS zones         └── Enterprise AI services
+└── ExpressRoute/VPN
+```
 ```
