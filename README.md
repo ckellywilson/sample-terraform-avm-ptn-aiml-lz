@@ -45,7 +45,6 @@ This implementation follows the Azure AI/ML Landing Zone pattern with multiple d
 ├── modules/              # Reusable Terraform modules
 │   └── ai-ml-landing-zone/
 ├── scripts/              # Automation and setup scripts
-├── azure-pipelines/      # CI/CD pipeline examples
 └── docs/                 # Additional documentation
 ```
 
@@ -212,12 +211,6 @@ Add these secrets in GitHub:
 2. Create environments: `dev`, `staging`, `prod`
 3. Add protection rules for `prod` (require reviews, etc.)
 
-#### Step 5: Enable Workflows
-The repository includes pre-configured workflows:
-- `.github/workflows/terraform-dev.yml` - Deploys to dev on PR
-- `.github/workflows/terraform-staging.yml` - Deploys to staging on merge to main
-- `.github/workflows/terraform-prod.yml` - Deploys to prod on manual trigger
-
 ### 🔷 Azure DevOps Setup
 
 #### Step 1: Project Setup
@@ -252,10 +245,7 @@ Create variable groups for each environment:
 #### Step 4: Create Pipelines
 1. Go to **Pipelines** → **Create Pipeline**
 2. Choose **Azure Repos Git** and select your repository
-3. Use existing pipeline files:
-   - `azure-pipelines/terraform-dev.yml`
-   - `azure-pipelines/terraform-staging.yml`
-   - `azure-pipelines/terraform-prod.yml`
+3. Create your own pipeline files based on your specific CI/CD requirements
 
 ---
 

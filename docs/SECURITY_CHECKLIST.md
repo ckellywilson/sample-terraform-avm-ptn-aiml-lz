@@ -144,7 +144,7 @@ This checklist ensures that credentials and infrastructure remain secure through
 ### Q: Do I need to create a Managed Identity?
 **A: No!** 
 - For **local development**: Create a Service Principal (use `./scripts/create-service-principal.sh`)
-- For **CI/CD pipeline**: Managed Identity is automatically provided by Azure DevOps/GitHub Actions
+- For **CI/CD pipeline**: Managed Identity is automatically provided by modern CI/CD platforms
 
 ### Q: What's the difference between Service Principal and Managed Identity?
 **A: Both do the same thing, but:**

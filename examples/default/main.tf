@@ -6,6 +6,10 @@ terraform {
       source  = "hashicorp/azurerm"
       version = "~> 4.21"
     }
+    http = {
+      source  = "hashicorp/http"
+      version = "~> 3.4"
+    }
     random = {
       source  = "hashicorp/random"
       version = "~> 3.5"
@@ -27,277 +31,197 @@ provider "azurerm" {
   }
 }
 
+## Section to provide a random Azure region for the resource group
+# This allows us to randomize the region for the resource group.
+module "regions" {
+  source  = "Azure/avm-utl-regions/azurerm"
+  version = "0.3.0"
+}
+
+# This allows us to randomize the region for the resource group.
+resource "random_integer" "region_index" {
+  max = length(module.regions.regions) - 1
+  min = 0
+}
+## End of section to provide a random Azure region for the resource group
+
 # This ensures we have unique CAF compliant names for our resources.
 module "naming" {
   source  = "Azure/naming/azurerm"
-  version = "~> 0.3"
+  version = "0.3.0"
 }
 
-data "azurerm_client_config" "current" {}
-
-# Generate unique suffix for resource names
-resource "random_string" "suffix" {
-  length  = 6
-  upper   = false
-  special = false
-}
-
-locals {
-  prefix = "${var.name_prefix}-${random_string.suffix.result}"
-}
-
-# Resource Group for Hub Landing Zone
-resource "azurerm_resource_group" "hub" {
-  name     = "${local.prefix}-hub-rg"
-  location = var.location
-  tags     = var.tags
-}
-
-# Example Hub Virtual Network
-resource "azurerm_virtual_network" "hub" {
-  name                = "${local.prefix}-hub-vnet"
-  address_space       = [var.hub_vnet_address_space]
-  location            = var.location
-  resource_group_name = azurerm_resource_group.hub.name
-  tags                = var.tags
-}
-
-# Hub Subnet for shared services
-resource "azurerm_subnet" "hub_default" {
-  name                 = "default"
-  resource_group_name  = azurerm_resource_group.hub.name
-  virtual_network_name = azurerm_virtual_network.hub.name
-  address_prefixes     = [cidrsubnet(var.hub_vnet_address_space, 2, 0)]
-}
-
-# Resource Group for AI/ML Landing Zone
-resource "azurerm_resource_group" "ai_ml" {
-  name     = "${local.prefix}-ai-ml-rg"
-  location = var.location
-  tags     = var.tags
-}
-
-# AI/ML Landing Zone Virtual Network
-resource "azurerm_virtual_network" "ai_ml" {
-  name                = "${local.prefix}-ai-ml-vnet"
-  address_space       = [var.ai_lz_vnet_address_space]
-  location            = var.location
-  resource_group_name = azurerm_resource_group.ai_ml.name
-  tags                = var.tags
-}
-
-# AI/ML Landing Zone Subnets
-resource "azurerm_subnet" "ai_ml_private_endpoints" {
-  name                 = "private-endpoints"
-  resource_group_name  = azurerm_resource_group.ai_ml.name
-  virtual_network_name = azurerm_virtual_network.ai_ml.name
-  address_prefixes     = [cidrsubnet(var.ai_lz_vnet_address_space, 3, 0)]
-}
-
-resource "azurerm_subnet" "ai_ml_compute" {
-  name                 = "compute"
-  resource_group_name  = azurerm_resource_group.ai_ml.name
-  virtual_network_name = azurerm_virtual_network.ai_ml.name
-  address_prefixes     = [cidrsubnet(var.ai_lz_vnet_address_space, 3, 1)]
-}
-
-# VNet Peering from AI/ML to Hub
-resource "azurerm_virtual_network_peering" "ai_ml_to_hub" {
-  name                      = "ai-ml-to-hub"
-  resource_group_name       = azurerm_resource_group.ai_ml.name
-  virtual_network_name      = azurerm_virtual_network.ai_ml.name
-  remote_virtual_network_id = azurerm_virtual_network.hub.id
-  
-  allow_virtual_network_access = true
-  allow_forwarded_traffic      = true
-  allow_gateway_transit        = false
-  use_remote_gateways         = false
-}
-
-# VNet Peering from Hub to AI/ML
-resource "azurerm_virtual_network_peering" "hub_to_ai_ml" {
-  name                      = "hub-to-ai-ml"
-  resource_group_name       = azurerm_resource_group.hub.name
-  virtual_network_name      = azurerm_virtual_network.hub.name
-  remote_virtual_network_id = azurerm_virtual_network.ai_ml.id
-  
-  allow_virtual_network_access = true
-  allow_forwarded_traffic      = true
-  allow_gateway_transit        = false
-  use_remote_gateways         = false
-}
-
-# Storage Account for AI Foundry
-resource "azurerm_storage_account" "ai_foundry" {
-  name                     = "${replace(local.prefix, "-", "")}aistorage"
-  resource_group_name      = azurerm_resource_group.ai_ml.name
-  location                 = var.location
-  account_tier             = "Standard"
-  account_replication_type = "LRS"
-  
-  public_network_access_enabled = false
-  
-  tags = var.tags
-}
-
-# Key Vault for AI Foundry
-resource "azurerm_key_vault" "ai_foundry" {
-  name                = "${local.prefix}-ai-kv"
-  location            = var.location
-  resource_group_name = azurerm_resource_group.ai_ml.name
-  tenant_id           = data.azurerm_client_config.current.tenant_id
-  
-  sku_name = "standard"
-  
-  public_network_access_enabled = false
-  
-  tags = var.tags
-}
-
-# Application Insights
-resource "azurerm_application_insights" "ai_foundry" {
-  name                = "${local.prefix}-ai-insights"
-  location            = var.location
-  resource_group_name = azurerm_resource_group.ai_ml.name
-  application_type    = "web"
-  
-  tags = var.tags
-}
-
-# Cognitive Services Account for AI Foundry
-resource "azurerm_cognitive_account" "ai_foundry" {
-  name                = "${local.prefix}-ai-cognitive"
-  location            = var.location
-  resource_group_name = azurerm_resource_group.ai_ml.name
-  kind                = "AIServices"
-  sku_name            = "S0"
-  
-  public_network_access_enabled = false
-  
-  tags = var.tags
-}
-
-# AI Search Service
-resource "azurerm_search_service" "ai_foundry" {
-  name                = "${local.prefix}-ai-search"
-  resource_group_name = azurerm_resource_group.ai_ml.name
-  location            = var.location
-  sku                 = "standard"
-  
-  public_network_access_enabled = false
-  
-  tags = var.tags
-}
-
-# Cosmos DB Account
-resource "azurerm_cosmosdb_account" "ai_foundry" {
-  name                = "${local.prefix}-ai-cosmos"
-  location            = var.location
-  resource_group_name = azurerm_resource_group.ai_ml.name
-  offer_type          = "Standard"
-  kind                = "GlobalDocumentDB"
-  
-  consistency_policy {
-    consistency_level = "Session"
+data "http" "ip" {
+  url = "https://api.ipify.org/"
+  retry {
+    attempts     = 5
+    max_delay_ms = 1000
+    min_delay_ms = 500
   }
-  
-  geo_location {
-    location          = var.location
-    failover_priority = 0
+}
+
+#create a sample hub to mimic an existing network landing zone configuration
+module "example_hub" {
+  source = "../../modules/example_hub_vnet"
+
+  deployer_ip_address = "${data.http.ip.response_body}/32"
+  location            = "australiaeast"
+  resource_group_name = "default-example-${module.naming.resource_group.name_unique}"
+  vnet_definition = {
+    address_space = "10.10.0.0/24"
   }
-  
-  public_network_access_enabled = false
-  
-  tags = var.tags
+  enable_telemetry = var.enable_telemetry
+  name_prefix      = "${module.naming.resource_group.name_unique}-hub"
 }
 
-# Private DNS Zones
-resource "azurerm_private_dns_zone" "blob" {
-  name                = "privatelink.blob.core.windows.net"
-  resource_group_name = azurerm_resource_group.ai_ml.name
-  tags                = var.tags
-}
+module "test" {
+  source = "Azure/terraform-azurerm-avm-ptn-aiml-landing-zone/azurerm"
+  version = "~> 1.0"
 
-resource "azurerm_private_dns_zone" "vault" {
-  name                = "privatelink.vaultcore.azure.net"
-  resource_group_name = azurerm_resource_group.ai_ml.name
-  tags                = var.tags
-}
-
-resource "azurerm_private_dns_zone" "search" {
-  name                = "privatelink.search.windows.net"
-  resource_group_name = azurerm_resource_group.ai_ml.name
-  tags                = var.tags
-}
-
-resource "azurerm_private_dns_zone" "cosmos" {
-  name                = "privatelink.documents.azure.com"
-  resource_group_name = azurerm_resource_group.ai_ml.name
-  tags                = var.tags
-}
-
-resource "azurerm_private_dns_zone" "cognitive" {
-  name                = "privatelink.cognitiveservices.azure.com"
-  resource_group_name = azurerm_resource_group.ai_ml.name
-  tags                = var.tags
-}
-
-# Link Private DNS Zones to both VNets
-resource "azurerm_private_dns_zone_virtual_network_link" "blob_ai_ml" {
-  name                  = "blob-ai-ml-link"
-  resource_group_name   = azurerm_resource_group.ai_ml.name
-  private_dns_zone_name = azurerm_private_dns_zone.blob.name
-  virtual_network_id    = azurerm_virtual_network.ai_ml.id
-  tags                  = var.tags
-}
-
-resource "azurerm_private_dns_zone_virtual_network_link" "blob_hub" {
-  name                  = "blob-hub-link"
-  resource_group_name   = azurerm_resource_group.ai_ml.name
-  private_dns_zone_name = azurerm_private_dns_zone.blob.name
-  virtual_network_id    = azurerm_virtual_network.hub.id
-  tags                  = var.tags
-}
-
-# Private Endpoints
-resource "azurerm_private_endpoint" "storage_blob" {
-  name                = "${local.prefix}-storage-blob-pe"
-  location            = var.location
-  resource_group_name = azurerm_resource_group.ai_ml.name
-  subnet_id           = azurerm_subnet.ai_ml_private_endpoints.id
-  
-  private_service_connection {
-    name                           = "storage-blob-psc"
-    private_connection_resource_id = azurerm_storage_account.ai_foundry.id
-    subresource_names              = ["blob"]
-    is_manual_connection           = false
+  location            = "australiaeast" #temporarily pinning on australiaeast for capacity limits in test subscription.
+  resource_group_name = "ai-lz-rg-default-${substr(module.naming.unique-seed, 0, 5)}"
+  vnet_definition = {
+    name          = "ai-lz-vnet-default"
+    address_space = "192.168.0.0/23"                                                                 # has to be out of 192.168.0.0/16 currently. Other RFC1918 not supported for foundry capabilityHost injection.
+    dns_servers   = [for key, value in module.example_hub.dns_resolver_inbound_ip_addresses : value] # Use the DNS resolver IPs from the example hub
+    hub_vnet_peering_definition = {
+      peer_vnet_resource_id = module.example_hub.virtual_network_resource_id
+      firewall_ip_address   = module.example_hub.firewall_ip_address
+    }
   }
-  
-  private_dns_zone_group {
-    name                 = "storage-blob-dns-zone-group"
-    private_dns_zone_ids = [azurerm_private_dns_zone.blob.id]
-  }
-  
-  tags = var.tags
-}
+  ai_foundry_definition = {
+    purge_on_destroy = true
+    ai_foundry = {
+      create_ai_agent_service = true
+    }
+    ai_model_deployments = {
+      "gpt-4o" = {
+        name = "gpt-4.1"
+        model = {
+          format  = "OpenAI"
+          name    = "gpt-4.1"
+          version = "2025-04-14"
+        }
+        scale = {
+          type     = "GlobalStandard"
+          capacity = 1
+        }
+      }
+    }
+    ai_projects = {
+      project_1 = {
+        name                       = "project-1"
+        description                = "Project 1 description"
+        display_name               = "Project 1 Display Name"
+        create_project_connections = true
+        cosmos_db_connection = {
+          new_resource_map_key = "this"
+        }
+        ai_search_connection = {
+          new_resource_map_key = "this"
+        }
+        storage_account_connection = {
+          new_resource_map_key = "this"
+        }
+      }
+    }
+    ai_search_definition = {
+      this = {
+        enable_diagnostic_settings = false
+      }
+    }
+    cosmosdb_definition = {
+      this = {
+        enable_diagnostic_settings = false
+        consistency_level          = "Session"
+      }
+    }
+    key_vault_definition = {
+      this = {
+        enable_diagnostic_settings = false
+      }
+    }
 
-resource "azurerm_private_endpoint" "key_vault" {
-  name                = "${local.prefix}-keyvault-pe"
-  location            = var.location
-  resource_group_name = azurerm_resource_group.ai_ml.name
-  subnet_id           = azurerm_subnet.ai_ml_private_endpoints.id
-  
-  private_service_connection {
-    name                           = "keyvault-psc"
-    private_connection_resource_id = azurerm_key_vault.ai_foundry.id
-    subresource_names              = ["vault"]
-    is_manual_connection           = false
+    storage_account_definition = {
+      this = {
+        enable_diagnostic_settings = false
+        shared_access_key_enabled  = true #configured for testing
+        endpoints = {
+          blob = {
+            type = "blob"
+          }
+        }
+      }
+    }
   }
-  
-  private_dns_zone_group {
-    name                 = "keyvault-dns-zone-group"
-    private_dns_zone_ids = [azurerm_private_dns_zone.vault.id]
+  app_gateway_definition = {
+    backend_address_pools = {
+      example_pool = {
+        name = "example-backend-pool"
+      }
+    }
+
+    backend_http_settings = {
+      example_http_settings = {
+        name     = "example-http-settings"
+        port     = 80
+        protocol = "Http"
+      }
+    }
+
+    frontend_ports = {
+      example_frontend_port = {
+        name = "example-frontend-port"
+        port = 80
+      }
+    }
+
+    http_listeners = {
+      example_listener = {
+        name               = "example-listener"
+        frontend_port_name = "example-frontend-port"
+      }
+    }
+
+    request_routing_rules = {
+      example_rule = {
+        name                       = "example-rule"
+        rule_type                  = "Basic"
+        http_listener_name         = "example-listener"
+        backend_address_pool_name  = "example-backend-pool"
+        backend_http_settings_name = "example-http-settings"
+        priority                   = 100
+      }
+    }
   }
-  
-  tags = var.tags
+  bastion_definition = {
+  }
+  container_app_environment_definition = {
+    enable_diagnostic_settings = false
+  }
+  enable_telemetry           = var.enable_telemetry
+  flag_platform_landing_zone = false
+  genai_container_registry_definition = {
+    enable_diagnostic_settings = false
+  }
+  genai_cosmosdb_definition = {
+    enable_diagnostic_settings = false
+    consistency_level          = "Session"
+  }
+  genai_key_vault_definition = {
+    public_network_access_enabled = true # configured for testing
+    network_acls = {
+      bypass   = "AzureServices"
+      ip_rules = ["${data.http.ip.response_body}/32"] # Allow access from the test runner's IP address
+    }
+  }
+  genai_storage_account_definition = {
+    enable_diagnostic_settings = false
+  }
+  ks_ai_search_definition = {
+    enable_diagnostic_settings = false
+  }
+  private_dns_zones = {
+    existing_zones_resource_group_resource_id = module.example_hub.resource_group_resource_id
+  }
 }

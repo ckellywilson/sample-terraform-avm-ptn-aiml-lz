@@ -6,6 +6,10 @@ terraform {
       source  = "hashicorp/azurerm"
       version = "~> 4.21"
     }
+    http = {
+      source  = "hashicorp/http"
+      version = "~> 3.4"
+    }
     random = {
       source  = "hashicorp/random"
       version = "~> 3.5"
@@ -27,198 +31,177 @@ provider "azurerm" {
   }
 }
 
-data "azurerm_client_config" "current" {}
-
-# Generate unique suffix for resource names
-resource "random_string" "suffix" {
-  length  = 6
-  upper   = false
-  special = false
+## Section to provide a random Azure region for the resource group
+# This allows us to randomize the region for the resource group.
+module "regions" {
+  source  = "Azure/avm-utl-regions/azurerm"
+  version = "0.3.0"
 }
 
-locals {
-  prefix = "${var.name_prefix}-${random_string.suffix.result}"
+# This allows us to randomize the region for the resource group.
+resource "random_integer" "region_index" {
+  max = length(module.regions.regions) - 1
+  min = 0
+}
+## End of section to provide a random Azure region for the resource group
+
+# This ensures we have unique CAF compliant names for our resources.
+module "naming" {
+  source  = "Azure/naming/azurerm"
+  version = "0.3.0"
 }
 
-# Resource Group for standalone AI/ML Landing Zone
-resource "azurerm_resource_group" "ai_ml" {
-  name     = "${local.prefix}-ai-ml-rg"
-  location = var.location
-  tags     = var.tags
-}
-
-# AI/ML Landing Zone Virtual Network (standalone - no hub)
-resource "azurerm_virtual_network" "ai_ml" {
-  name                = "${local.prefix}-ai-ml-vnet"
-  address_space       = [var.ai_lz_vnet_address_space]
-  location            = var.location
-  resource_group_name = azurerm_resource_group.ai_ml.name
-  tags                = var.tags
-}
-
-# AI/ML Landing Zone Subnets
-resource "azurerm_subnet" "ai_ml_private_endpoints" {
-  name                 = "private-endpoints"
-  resource_group_name  = azurerm_resource_group.ai_ml.name
-  virtual_network_name = azurerm_virtual_network.ai_ml.name
-  address_prefixes     = [cidrsubnet(var.ai_lz_vnet_address_space, 3, 0)]
-}
-
-resource "azurerm_subnet" "ai_ml_compute" {
-  name                 = "compute"
-  resource_group_name  = azurerm_resource_group.ai_ml.name
-  virtual_network_name = azurerm_virtual_network.ai_ml.name
-  address_prefixes     = [cidrsubnet(var.ai_lz_vnet_address_space, 3, 1)]
-}
-
-resource "azurerm_subnet" "ai_ml_web" {
-  name                 = "web"
-  resource_group_name  = azurerm_resource_group.ai_ml.name
-  virtual_network_name = azurerm_virtual_network.ai_ml.name
-  address_prefixes     = [cidrsubnet(var.ai_lz_vnet_address_space, 3, 2)]
-}
-
-# Network Security Group for compute subnet
-resource "azurerm_network_security_group" "ai_ml_compute" {
-  name                = "${local.prefix}-compute-nsg"
-  location            = var.location
-  resource_group_name = azurerm_resource_group.ai_ml.name
-
-  security_rule {
-    name                       = "AllowHTTPS"
-    priority                   = 1001
-    direction                  = "Inbound"
-    access                     = "Allow"
-    protocol                   = "Tcp"
-    source_port_range          = "*"
-    destination_port_range     = "443"
-    source_address_prefix      = "*"
-    destination_address_prefix = "*"
+# Get the deployer IP address to allow for public write to the key vault. This is to make sure the tests run.
+# In practice your deployer machine will be on a private network and this will not be required.
+data "http" "ip" {
+  url = "https://api.ipify.org/"
+  retry {
+    attempts     = 5
+    max_delay_ms = 1000
+    min_delay_ms = 500
   }
-
-  tags = var.tags
 }
 
-# Associate NSG with compute subnet
-resource "azurerm_subnet_network_security_group_association" "ai_ml_compute" {
-  subnet_id                 = azurerm_subnet.ai_ml_compute.id
-  network_security_group_id = azurerm_network_security_group.ai_ml_compute.id
-}
+module "test" {
+  source = "Azure/terraform-azurerm-avm-ptn-aiml-landing-zone/azurerm"
+  version = "~> 1.0"
 
-# Storage Account for AI Foundry
-resource "azurerm_storage_account" "ai_foundry" {
-  name                     = "${replace(local.prefix, "-", "")}aistorage"
-  resource_group_name      = azurerm_resource_group.ai_ml.name
-  location                 = var.location
-  account_tier             = "Standard"
-  account_replication_type = "LRS"
-  
-  # Enable public access for standalone deployment
-  public_network_access_enabled = true
-  
-  tags = var.tags
-}
-
-# Key Vault for AI Foundry
-resource "azurerm_key_vault" "ai_foundry" {
-  name                = "${local.prefix}-ai-kv"
-  location            = var.location
-  resource_group_name = azurerm_resource_group.ai_ml.name
-  tenant_id           = data.azurerm_client_config.current.tenant_id
-  
-  sku_name = "standard"
-  
-  # Enable public access for standalone deployment
-  public_network_access_enabled = true
-  
-  # Access policy for current user
-  access_policy {
-    tenant_id = data.azurerm_client_config.current.tenant_id
-    object_id = data.azurerm_client_config.current.object_id
-
-    key_permissions = [
-      "Get", "List", "Update", "Create", "Import", "Delete", "Recover", "Backup", "Restore"
-    ]
-
-    secret_permissions = [
-      "Get", "List", "Set", "Delete", "Recover", "Backup", "Restore"
-    ]
-
-    certificate_permissions = [
-      "Get", "List", "Update", "Create", "Import", "Delete", "Recover", "Backup", "Restore"
-    ]
+  location            = "australiaeast" #temporarily pinning on australiaeast for capacity limits in test subscription.
+  resource_group_name = "ai-lz-rg-standalone-${substr(module.naming.unique-seed, 0, 5)}"
+  vnet_definition = {
+    name          = "ai-lz-vnet-standalone"
+    address_space = "192.168.0.0/23" # has to be out of 192.168.0.0/16 currently. Other RFC1918 not supported for foundry capabilityHost injection.
   }
-  
-  tags = var.tags
-}
+  ai_foundry_definition = {
+    purge_on_destroy = true
+    ai_foundry = {
+      create_ai_agent_service = true
+    }
+    ai_model_deployments = {
+      "gpt-4o" = {
+        name = "gpt-4.1"
+        model = {
+          format  = "OpenAI"
+          name    = "gpt-4.1"
+          version = "2025-04-14"
+        }
+        scale = {
+          type     = "GlobalStandard"
+          capacity = 1
+        }
+      }
+    }
+    ai_projects = {
+      project_1 = {
+        name                       = "project-1"
+        description                = "Project 1 description"
+        display_name               = "Project 1 Display Name"
+        create_project_connections = true
+        cosmos_db_connection = {
+          new_resource_map_key = "this"
+        }
+        ai_search_connection = {
+          new_resource_map_key = "this"
+        }
+        storage_account_connection = {
+          new_resource_map_key = "this"
+        }
+      }
+    }
+    ai_search_definition = {
+      this = {
+        enable_diagnostic_settings = false
+      }
+    }
+    cosmosdb_definition = {
+      this = {
+        enable_diagnostic_settings = false
+        consistency_level          = "Session"
+      }
+    }
+    key_vault_definition = {
+      this = {
+        enable_diagnostic_settings = false
+      }
+    }
 
-# Application Insights
-resource "azurerm_application_insights" "ai_foundry" {
-  name                = "${local.prefix}-ai-insights"
-  location            = var.location
-  resource_group_name = azurerm_resource_group.ai_ml.name
-  application_type    = "web"
-  
-  tags = var.tags
-}
-
-# Cognitive Services Account for AI Foundry
-resource "azurerm_cognitive_account" "ai_foundry" {
-  name                = "${local.prefix}-ai-cognitive"
-  location            = var.location
-  resource_group_name = azurerm_resource_group.ai_ml.name
-  kind                = "AIServices"
-  sku_name            = "S0"
-  
-  # Enable public access for standalone deployment
-  public_network_access_enabled = true
-  
-  tags = var.tags
-}
-
-# AI Search Service
-resource "azurerm_search_service" "ai_foundry" {
-  name                = "${local.prefix}-ai-search"
-  resource_group_name = azurerm_resource_group.ai_ml.name
-  location            = var.location
-  sku                 = "standard"
-  
-  # Enable public access for standalone deployment
-  public_network_access_enabled = true
-  
-  tags = var.tags
-}
-
-# Cosmos DB Account
-resource "azurerm_cosmosdb_account" "ai_foundry" {
-  name                = "${local.prefix}-ai-cosmos"
-  location            = var.location
-  resource_group_name = azurerm_resource_group.ai_ml.name
-  offer_type          = "Standard"
-  kind                = "GlobalDocumentDB"
-  
-  consistency_policy {
-    consistency_level = "Session"
+    storage_account_definition = {
+      this = {
+        enable_diagnostic_settings = false
+        shared_access_key_enabled  = true #configured for testing
+        endpoints = {
+          blob = {
+            type = "blob"
+          }
+        }
+      }
+    }
   }
-  
-  geo_location {
-    location          = var.location
-    failover_priority = 0
-  }
-  
-  # Enable public access for standalone deployment
-  public_network_access_enabled = true
-  
-  tags = var.tags
-}
+  app_gateway_definition = {
+    backend_address_pools = {
+      example_pool = {
+        name = "example-backend-pool"
+      }
+    }
 
-# Log Analytics Workspace for monitoring
-resource "azurerm_log_analytics_workspace" "ai_foundry" {
-  name                = "${local.prefix}-ai-logs"
-  location            = var.location
-  resource_group_name = azurerm_resource_group.ai_ml.name
-  sku                 = "PerGB2018"
-  retention_in_days   = 30
-  
-  tags = var.tags
+    backend_http_settings = {
+      example_http_settings = {
+        name     = "example-http-settings"
+        port     = 80
+        protocol = "Http"
+      }
+    }
+
+    frontend_ports = {
+      example_frontend_port = {
+        name = "example-frontend-port"
+        port = 80
+      }
+    }
+
+    http_listeners = {
+      example_listener = {
+        name               = "example-listener"
+        frontend_port_name = "example-frontend-port"
+      }
+    }
+
+    request_routing_rules = {
+      example_rule = {
+        name                       = "example-rule"
+        rule_type                  = "Basic"
+        http_listener_name         = "example-listener"
+        backend_address_pool_name  = "example-backend-pool"
+        backend_http_settings_name = "example-http-settings"
+        priority                   = 100
+      }
+    }
+  }
+  bastion_definition = {
+  }
+  container_app_environment_definition = {
+    enable_diagnostic_settings = false
+  }
+  enable_telemetry           = var.enable_telemetry
+  flag_platform_landing_zone = true
+  genai_container_registry_definition = {
+    enable_diagnostic_settings = false
+  }
+  genai_cosmosdb_definition = {
+    enable_diagnostic_settings = false
+  }
+  genai_key_vault_definition = {
+    #this is for AVM testing purposes only. Doing this as we don't have an easy for the test runner to be privately connected for testing.
+    public_network_access_enabled = true
+    network_acls = {
+      bypass   = "AzureServices"
+      ip_rules = ["${data.http.ip.response_body}/32"]
+    }
+  }
+  genai_storage_account_definition = {
+    enable_diagnostic_settings = false
+  }
+  ks_ai_search_definition = {
+    enable_diagnostic_settings = false
+  }
 }

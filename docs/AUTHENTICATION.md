@@ -7,7 +7,7 @@ This document explains how to set up authentication for Terraform that mimics yo
 This setup allows you to simulate your CI/CD pipeline authentication locally:
 
 - **Local Development**: Uses **Service Principal** (you create this)
-- **CI/CD Pipeline**: Uses **Managed Identity** (automatically provided by Azure DevOps/GitHub Actions)
+- **CI/CD Pipeline**: Uses **Managed Identity** (automatically provided by CI/CD platforms)
 
 Since Managed Identity only works on Azure resources (like CI/CD hosted agents), we use a Service Principal locally that behaves the same way.
 
@@ -99,19 +99,14 @@ source ./scripts/setup-local-auth.sh
       terraform apply -auto-approve
 ```
 
-### GitHub Actions
-```yaml
-- name: Azure Login
-  uses: azure/login@v1
-  with:
-    creds: ${{ secrets.AZURE_CREDENTIALS }}  # This sets up Managed Identity
+### CI/CD Platform
+Configure your CI/CD platform with appropriate service connections or secrets to enable Managed Identity authentication. Most modern CI/CD platforms provide this automatically:
 
-- name: Run Terraform
-  run: |
-    # No authentication setup needed - Managed Identity is automatic
-    terraform init
-    terraform plan
-    terraform apply -auto-approve
+```bash
+# No authentication setup needed - Managed Identity is automatic
+terraform init
+terraform plan
+terraform apply -auto-approve
 ```
 
 **Key Point**: CI/CD platforms automatically provide Managed Identity. You just configure the service connection/secrets, and the platform handles the rest.
