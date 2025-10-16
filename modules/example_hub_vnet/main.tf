@@ -177,10 +177,10 @@ module "private_dns_zones" {
   enable_telemetry    = var.enable_telemetry
   virtual_network_links = {
     alz_vnet_link = {
-      vnetlinkname      = "${module.ai_lz_vnet.name}-link"
-      vnetid            = module.ai_lz_vnet.resource_id
-      autoregistration  = false
-      tags              = var.tags
+      vnetlinkname     = "${module.ai_lz_vnet.name}-link"
+      vnetid           = module.ai_lz_vnet.resource_id
+      autoregistration = false
+      tags             = var.tags
     }
   }
   dns_zone_virtual_network_registration_enabled = false
