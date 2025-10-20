@@ -1,9 +1,9 @@
 variable "environment" {
   type        = string
   description = "Environment name (dev, staging, prod)"
-  
+
   validation {
-    condition = contains(["dev", "staging", "prod", "development", "stage", "uat", "pre-prod", "integration", "production", "live", "main", "sandbox", "test"], var.environment)
+    condition     = contains(["dev", "staging", "prod", "development", "stage", "uat", "pre-prod", "integration", "production", "live", "main", "sandbox", "test"], var.environment)
     error_message = "Environment must be one of the supported values."
   }
 }

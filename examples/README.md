@@ -24,6 +24,16 @@ Standalone AI/ML landing zone without any hub network dependencies. Perfect for 
 - **Dependencies**: None
 - **Network**: Single VNet with public service access
 
+### 🔗 [Sample Hub](./sample-hub/)
+**ALZ-based Hub Infrastructure**
+
+Creates a production-ready hub network using official Azure Landing Zone (ALZ) Terraform Azure Verified Modules. Use this to create a sample hub for testing the with-existing-hub scenario.
+
+- **Use Case**: Hub creation for testing, development, or production
+- **Complexity**: Medium
+- **Dependencies**: None
+- **Network**: Complete hub with firewall, DNS resolver, and private DNS zones
+
 ### 🏢 [With Existing Hub](./with-existing-hub/)
 **Enterprise Hub Integration**
 
@@ -34,17 +44,30 @@ Integrates AI/ML landing zone with existing platform hub network infrastructure.
 - **Dependencies**: Existing hub network, proper permissions
 - **Network**: Peering to existing hub, private endpoints
 
+> **💡 Need a Hub Network?** Use the [Sample Hub](./sample-hub/) example to create a production-ready hub infrastructure using official Azure Landing Zone Terraform modules.
+
 ## Deployment Patterns Comparison
 
-| Feature | Default | Standalone | With Existing Hub |
-|---------|---------|------------|-------------------|
-| **Hub Network** | ✅ Creates example | ❌ None | ✅ Uses existing |
-| **VNet Peering** | ✅ Automatic | ❌ None | ✅ Manual config |
-| **Private Endpoints** | ✅ Yes | ❌ Public access | ✅ Yes |
-| **DNS Integration** | ✅ New zones | ❌ Public DNS | ✅ Existing zones |
-| **Enterprise Ready** | ⚠️ Dev/Test | ❌ No | ✅ Yes |
-| **Setup Complexity** | 🟡 Medium | 🟢 Low | 🔴 High |
-| **Prerequisites** | None | None | Hub network |
+| Feature | Default | Standalone | Sample Hub | With Existing Hub |
+|---------|---------|------------|------------|-------------------|
+| **Hub Network** | ✅ Creates example | ❌ None | ✅ Creates ALZ hub | ✅ Uses existing |
+| **VNet Peering** | ✅ Automatic | ❌ None | N/A (hub only) | ✅ Manual config |
+| **Private Endpoints** | ✅ Yes | ❌ Public access | N/A (hub only) | ✅ Yes |
+| **DNS Integration** | ✅ New zones | ❌ Public DNS | ✅ Creates zones | ✅ Existing zones |
+| **Enterprise Ready** | ⚠️ Dev/Test | ❌ No | ✅ Yes | ✅ Yes |
+| **Setup Complexity** | 🟡 Medium | 🟢 Low | � Medium | �🔴 High |
+| **Prerequisites** | None | None | None | Hub network |
+
+## Subscription Organization
+
+Following Azure Landing Zone best practices, different components are typically deployed in separate subscriptions:
+
+| Component | Subscription Type | Managed By | Examples |
+|-----------|------------------|------------|----------|
+| **Hub Infrastructure** | Connectivity | Platform Team | `sample-hub/` |
+| **AI/ML Landing Zone** | Application | Application Team | `default/`, `standalone/`, `with-existing-hub/` |
+
+> **🏢 Enterprise Pattern**: Deploy the hub in a connectivity subscription and AI/ML workloads in application subscriptions. This provides proper separation of concerns and governance boundaries.
 
 ## Quick Start Guide
 
@@ -57,7 +80,10 @@ cd default/
 # For isolated workloads
 cd standalone/
 
-# For enterprise integration
+# For creating a production hub (connectivity subscription)
+cd sample-hub/
+
+# For enterprise integration (application subscription)
 cd with-existing-hub/
 ```
 

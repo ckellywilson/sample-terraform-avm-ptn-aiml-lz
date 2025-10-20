@@ -75,7 +75,7 @@ module "example_hub" {
 }
 
 module "test" {
-  source = "Azure/terraform-azurerm-avm-ptn-aiml-landing-zone/azurerm"
+  source  = "Azure/terraform-azurerm-avm-ptn-aiml-landing-zone/azurerm"
   version = "~> 1.0"
 
   location            = "australiaeast" #temporarily pinning on australiaeast for capacity limits in test subscription.
@@ -144,8 +144,9 @@ module "test" {
 
     storage_account_definition = {
       this = {
-        enable_diagnostic_settings = false
-        shared_access_key_enabled  = true #configured for testing
+        enable_diagnostic_settings      = false
+        shared_access_key_enabled       = false # Disable shared key access for security compliance
+        default_to_oauth_authentication = true  # Force OAuth authentication for all operations
         endpoints = {
           blob = {
             type = "blob"
@@ -216,7 +217,9 @@ module "test" {
     }
   }
   genai_storage_account_definition = {
-    enable_diagnostic_settings = false
+    enable_diagnostic_settings      = false
+    shared_access_key_enabled       = false # Disable shared key access for security compliance
+    default_to_oauth_authentication = true  # Force OAuth authentication for all operations
   }
   ks_ai_search_definition = {
     enable_diagnostic_settings = false
@@ -224,4 +227,20 @@ module "test" {
   private_dns_zones = {
     existing_zones_resource_group_resource_id = module.example_hub.resource_group_resource_id
   }
+}
+
+# RBAC: Grant Storage Blob Data Contributor role to current service principal for AI Foundry storage
+resource "azurerm_role_assignment" "ai_foundry_storage_blob_contributor" {
+  count                = length(module.ai_ml_landing_zone.ai_foundry_storage_accounts)
+  scope                = values(module.ai_ml_landing_zone.ai_foundry_storage_accounts)[count.index].resource_id
+  role_definition_name = "Storage Blob Data Contributor"
+  principal_id         = data.azurerm_client_config.current.object_id
+}
+
+# RBAC: Grant Storage Blob Data Contributor role to current service principal for GenAI storage
+resource "azurerm_role_assignment" "genai_storage_blob_contributor" {
+  count                = length(module.ai_ml_landing_zone.genai_storage_accounts)
+  scope                = values(module.ai_ml_landing_zone.genai_storage_accounts)[count.index].resource_id
+  role_definition_name = "Storage Blob Data Contributor"
+  principal_id         = data.azurerm_client_config.current.object_id
 }

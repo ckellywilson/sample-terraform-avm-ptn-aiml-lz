@@ -2,6 +2,13 @@
 
 This repository provides a complete Azure AI/ML Landing Zone implementation based on the Azure Verified Module (AVM) pattern, enabling secure and scalable AI/ML workloads in Azure.
 
+## Related Repositories
+
+This implementation is based on the following foundational repositories:
+
+- **[Azure AI Landing Zones](https://github.com/Azure/AI-Landing-Zones)**: The base Azure AI Landing Zone reference architecture and design patterns
+- **[Terraform Azure AI/ML Landing Zone Module](https://github.com/Azure/terraform-azurerm-avm-ptn-aiml-landing-zone)**: The official Azure Verified Module for AI/ML Landing Zone implementation
+
 ## Project Overview
 
 This pattern module creates a comprehensive AI/ML Landing Zone infrastructure that supports multiple AI project scenarios. The module follows Azure Well-Architected Framework principles and provides two deployment configurations:
@@ -55,7 +62,18 @@ This repository follows the Azure Verified Module pattern with comprehensive exa
 │   │   ├── outputs.tf          # Output values
 │   │   ├── README.md           # Deployment guide
 │   │   └── terraform.tfvars.example # Sample configuration
+│   ├── sample-hub/             # ALZ-based hub infrastructure
+│   │   ├── main.tf             # Hub infrastructure using ALZ AVM
+│   │   ├── variables.tf        # Hub configuration variables
+│   │   ├── outputs.tf          # Hub output values
+│   │   ├── README.md           # Hub deployment guide
+│   │   └── terraform.tfvars.example # Hub configuration examples
 │   └── with-existing-hub/      # Existing hub integration
+│       ├── main.tf             # AI/ML LZ with hub integration
+│       ├── variables.tf        # Integration variables
+│       ├── outputs.tf          # Integration outputs
+│       ├── README.md           # Integration guide
+│       └── terraform.tfvars.example # Integration configuration
 ├── modules/                    # Supporting modules
 │   └── example_hub_vnet/       # Sample hub infrastructure
 └── shared/                     # Shared resources
@@ -87,11 +105,12 @@ Complete self-contained deployment for organizations without existing platform i
 
 ## Available Examples
 
-This repository includes three example configurations in the `examples/` folder:
+This repository includes four example configurations in the `examples/` folder:
 
 - **`examples/default/`** - Hub-and-spoke integration pattern with sample hub infrastructure
 - **`examples/standalone/`** - Self-contained deployment with all services included  
-- **`examples/with-existing-hub/`** - Integration with existing hub VNet (original reference)
+- **`examples/sample-hub/`** - Production-ready hub infrastructure using ALZ AVM modules
+- **`examples/with-existing-hub/`** - Integration with existing hub VNet (enterprise scenario)
 
 Each example includes complete Terraform configurations with documentation and sample variable files.
 
@@ -108,11 +127,33 @@ Each example includes complete Terraform configurations with documentation and s
 - **Quotas**: Sufficient quotas for compute, storage, and AI services
 - **Regions**: Choose regions that support all required AI services
 
-### Networking Prerequisites (Default Pattern Only)
+### Networking Prerequisites (Hub-Spoke Pattern Only)
 - **Hub VNet**: Existing hub virtual network with DNS services
 - **Private DNS**: Existing private DNS zones or resource group for zone creation  
 - **Firewall**: Hub firewall with appropriate rules for AI/ML traffic
 - **Connectivity**: Express Route or VPN connectivity if hybrid access required
+
+### Creating a Hub Network for Testing
+
+If you don't have an existing platform hub network but want to test the hub-spoke integration pattern, you can create a sample hub using the official Azure Landing Zone (ALZ) Terraform Azure Verified Modules:
+
+**Option 1: Sample Hub (Recommended)**
+- **Location**: `examples/sample-hub/` - Complete ALZ-based hub infrastructure
+- **Features**: Azure Firewall, DNS Private Resolver, Private DNS Zones
+- **Use Case**: Production-ready hub for testing or actual deployment
+- **Deployment**: Typically in a separate connectivity subscription (enterprise pattern)
+
+**Option 2: Simple Hub for Development**
+- **Location**: `examples/default/` - Basic hub infrastructure included with AI/ML LZ
+- **Features**: Simple VNet with basic networking
+- **Use Case**: Development and learning scenarios
+
+**Option 3: Custom ALZ Modules**
+- **Modules**: Use individual ALZ modules for specific requirements
+- **Advanced**: [terraform-azurerm-avm-ptn-hub-and-spoke](https://registry.terraform.io/modules/Azure/avm-ptn-hub-and-spoke/azurerm/latest)
+- **Use Case**: Complex enterprise scenarios with specific requirements
+
+For detailed guidance, see the [Sample Hub example](examples/sample-hub/README.md) for production-ready hub creation or the [with-existing-hub example](examples/with-existing-hub/README.md) for integration guidance.
 
 ## Quick Start
 

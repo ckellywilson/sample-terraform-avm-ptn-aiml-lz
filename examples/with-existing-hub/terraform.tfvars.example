@@ -14,6 +14,9 @@ existing_hub_vnet_name           = "vnet-hub-eastus2"
 # Hub DNS Configuration (optional)
 hub_dns_servers = []  # Leave empty to use Azure default DNS, or specify hub DNS servers like ["10.0.1.4", "10.0.1.5"]
 
+# Hub Firewall Configuration (optional)
+hub_firewall_ip_address = null  # "10.0.2.4"  # Set to hub firewall private IP for internet traffic routing
+
 # VNet Peering Configuration
 create_reverse_peering = false  # Set to true if you have permissions to create peering on the hub side
 
@@ -23,15 +26,21 @@ enable_hub_peering_settings = {
   allow_gateway_transit_on_hub = true   # Allow AI/ML LZ to use hub's gateways in the future
 }
 
-# Private DNS Zones Configuration (optional)
+# Private DNS Zones Configuration (optional) 
 # If your hub already has private DNS zones, specify them here to avoid duplicates
+# This provides centralized DNS management and is the recommended enterprise pattern
 existing_private_dns_zones = {
-  resource_group_name = null  # "rg-connectivity-eastus2"  # Uncomment and set if using existing zones
-  blob_zone_name      = null  # "privatelink.blob.core.windows.net"
-  vault_zone_name     = null  # "privatelink.vaultcore.azure.net"
-  search_zone_name    = null  # "privatelink.search.windows.net"
-  cosmos_zone_name    = null  # "privatelink.documents.azure.com"
-  cognitive_zone_name = null  # "privatelink.cognitiveservices.azure.com"
+  resource_group_name          = null  # "rg-connectivity-eastus2"  # Uncomment and set if using existing zones
+  blob_zone_name               = null  # "privatelink.blob.core.windows.net"
+  file_zone_name               = null  # "privatelink.file.core.windows.net"
+  queue_zone_name              = null  # "privatelink.queue.core.windows.net"
+  table_zone_name              = null  # "privatelink.table.core.windows.net"
+  vault_zone_name              = null  # "privatelink.vaultcore.azure.net"
+  search_zone_name             = null  # "privatelink.search.windows.net"
+  cosmos_zone_name             = null  # "privatelink.documents.azure.com"
+  cognitive_zone_name          = null  # "privatelink.cognitiveservices.azure.com"
+  openai_zone_name             = null  # "privatelink.openai.azure.com"
+  container_registry_zone_name = null  # "privatelink.azurecr.io"
 }
 
 # Telemetry (optional)
