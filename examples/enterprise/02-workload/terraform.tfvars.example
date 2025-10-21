@@ -1,0 +1,92 @@
+# Workload deployment configuration example
+# Copy this file to terraform.tfvars and modify as needed
+
+# Azure region for workload deployment (should match platform deployment)
+location = "australiaeast"
+
+# Workload resource group name (leave empty for auto-generated name)
+workload_resource_group_name = ""
+
+# Spoke virtual network configuration
+spoke_vnet_name     = "vnet-aiml-spoke-enterprise"
+spoke_address_space = "192.168.0.0/23"
+
+# Enable telemetry collection
+enable_telemetry = true
+
+# Whether to purge AI resources on destroy (for testing environments)
+purge_on_destroy = true
+
+# Hub connection method - choose one of the following approaches:
+
+# Option 1: Use remote state to reference platform deployment (recommended)
+use_remote_state = true
+remote_state_backend = "local"
+remote_state_config = {
+  path = "../01-platform/terraform.tfstate"
+}
+
+# Option 2: Use data sources to reference existing hub resources
+# Set use_remote_state = false and configure the following:
+# hub_virtual_network_name = "vnet-hub-example"
+# hub_resource_group_name = "rg-platform-hub-example"
+# hub_firewall_name = "fw-hub-example"
+# hub_firewall_ip_address = "10.10.0.4"
+# hub_dns_resolver_name = "dnspr-hub-example"
+# hub_dns_resolver_ips = {
+#   inbound1 = "10.10.0.10"
+# }
+
+# AI/ML Model Deployments
+ai_model_deployments = {
+  "gpt-4o" = {
+    name = "gpt-4.1"
+    model = {
+      format  = "OpenAI"
+      name    = "gpt-4.1"
+      version = "2025-04-14"
+    }
+    scale = {
+      type     = "GlobalStandard"
+      capacity = 1
+    }
+  }
+}
+
+# AI Projects Configuration
+ai_projects = {
+  project_1 = {
+    name                       = "project-1"
+    description                = "Enterprise AI/ML Project"
+    display_name               = "Enterprise AI/ML Project"
+    create_project_connections = true
+    cosmos_db_connection = {
+      new_resource_map_key = "this"
+    }
+    ai_search_connection = {
+      new_resource_map_key = "this"
+    }
+    storage_account_connection = {
+      new_resource_map_key = "this"
+    }
+  }
+}
+
+# GenAI Key Vault configuration with network access
+genai_key_vault_definition = {
+  public_network_access_enabled = true
+  network_acls = {
+    bypass   = "AzureServices"
+    ip_rules = [] # Deployer IP will be added automatically
+  }
+}
+
+# Tags to apply to all workload resources
+tags = {
+  Environment   = "Production"
+  Owner         = "AI-ML-Team"
+  CostCenter    = "Data-Science"
+  DeployedBy    = "Terraform"
+  Purpose       = "AI-ML-Workload"
+  Project       = "Enterprise-AI"
+}

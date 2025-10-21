@@ -1,0 +1,35 @@
+# Platform deployment configuration example
+# Copy this file to terraform.tfvars and modify as needed
+
+# Azure region for platform deployment
+location = "australiaeast"
+
+# Platform resource group name (leave empty for auto-generated name)
+platform_resource_group_name = ""
+
+# Hub virtual network address space
+hub_address_space = "10.10.0.0/24"
+
+# Hub resource name prefix (leave empty for auto-generated prefix)
+hub_name_prefix = ""
+
+# Enable telemetry collection
+enable_telemetry = true
+
+# Jump VM configuration for hub network
+jump_vm_definition = {
+  sku = "Standard_D2s_v3"
+  tags = {
+    Environment = "Platform"
+    Purpose     = "JumpBox"
+  }
+}
+
+# Tags to apply to all platform resources
+tags = {
+  Environment   = "Production"
+  Owner         = "Platform-Team"
+  CostCenter    = "IT-Infrastructure"
+  DeployedBy    = "Terraform"
+  Purpose       = "AI-ML-Platform-Hub"
+}
