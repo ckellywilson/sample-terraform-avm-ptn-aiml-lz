@@ -4,8 +4,9 @@ A simplified example repository demonstrating the Azure AI/ML Landing Zone patte
 
 ## Structure
 
-- `examples/standalone/` - Example deployment using the AVM AI/ML Landing Zone pattern
-- `modules/example_hub_vnet/` - Supporting hub VNet module for the example
+- `examples/standalone/` - True standalone deployment of AI/ML Landing Zone without hub dependencies
+- `examples/default/` - Example deployment that integrates with an existing hub VNet
+- `modules/example_hub_vnet/` - Supporting hub VNet module for the default example
 
 ## Getting Started
 
