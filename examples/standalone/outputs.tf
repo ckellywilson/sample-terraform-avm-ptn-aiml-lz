@@ -1,19 +1,15 @@
-# Standalone Example Outputs
+# Outputs for the standalone example
+output "hub_virtual_network_id" {
+  description = "The ID of the hub virtual network"
+  value       = module.example_hub.virtual_network_resource_id
+}
 
-# Add outputs as needed for your use case
-# Example outputs that might be useful:
+output "hub_firewall_ip_address" {
+  description = "The IP address of the Azure Firewall in the hub virtual network"
+  value       = module.example_hub.firewall_ip_address
+}
 
-# output "resource_group_name" {
-#   description = "The name of the resource group created for the AI/ML Landing Zone"
-#   value       = module.test.resource_group_name
-# }
-
-# output "ai_foundry_resource_id" {
-#   description = "The resource ID of the AI Foundry hub"
-#   value       = module.test.ai_foundry_resource_id
-# }
-
-# output "vnet_resource_id" {
-#   description = "The resource ID of the AI/ML Landing Zone VNet"
-#   value       = module.test.vnet_resource_id
-# }
+output "hub_dns_resolver_inbound_ip_addresses" {
+  description = "The inbound IP addresses of the DNS resolver in the hub virtual network"
+  value       = module.example_hub.dns_resolver_inbound_ip_addresses
+}

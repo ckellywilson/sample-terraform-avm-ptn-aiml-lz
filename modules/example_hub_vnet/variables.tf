@@ -66,6 +66,7 @@ DESCRIPTION
 }
 
 variable "name_prefix" {
+  #TODO: add a validation rule to keep this under 10 characters only alphanumeric lowercase
   type        = string
   default     = null
   description = <<DESCRIPTION

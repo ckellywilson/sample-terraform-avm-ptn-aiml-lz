@@ -1,3 +1,4 @@
+
 data "azurerm_client_config" "current" {}
 
 module "avm_utl_regions" {
@@ -55,8 +56,6 @@ module "bastion_pip" {
   name                = "${local.bastion_name}-pip"
   resource_group_name = azurerm_resource_group.this.name
   enable_telemetry    = var.enable_telemetry
-  allocation_method   = "Static"
-  sku                 = "Standard"
   zones               = local.region_zones
 }
 
@@ -82,8 +81,6 @@ module "fw_pip" {
   name                = "${local.firewall_name}-pip"
   resource_group_name = azurerm_resource_group.this.name
   enable_telemetry    = var.enable_telemetry
-  allocation_method   = "Static"
-  sku                 = "Standard"
   zones               = local.region_zones
 }
 
@@ -135,7 +132,6 @@ module "firewall_network_rule_collection_group" {
   firewall_policy_rule_collection_group_network_rule_collection = local.firewall_policy_rule_collection_group_network_rule_collection
   firewall_policy_rule_collection_group_priority                = local.firewall_policy_rule_collection_group_priority
 }
-
 # Add a log analytics workspace for the firewall logs to do any connectivity troubleshooting if needed.
 module "log_analytics_workspace" {
   source  = "Azure/avm-res-operationalinsights-workspace/azurerm"
@@ -148,7 +144,6 @@ module "log_analytics_workspace" {
   log_analytics_workspace_retention_in_days = 30
   log_analytics_workspace_sku               = "PerGB2018"
 }
-
 # Add DNS resolver with inbound endpoint
 module "private_resolver" {
   source  = "Azure/avm-res-network-dnsresolver/azurerm"
@@ -165,7 +160,6 @@ module "private_resolver" {
     }
   }
 }
-
 # Create the Private DNS zones and link to the hub VNet
 module "private_dns_zones" {
   source   = "Azure/avm-res-network-privatednszone/azurerm"
@@ -177,56 +171,13 @@ module "private_dns_zones" {
   enable_telemetry    = var.enable_telemetry
   virtual_network_links = {
     alz_vnet_link = {
-      vnetlinkname     = "${module.ai_lz_vnet.name}-link"
-      vnetid           = module.ai_lz_vnet.resource_id
-      autoregistration = false
-      tags             = var.tags
-    }
-  }
-  dns_zone_virtual_network_registration_enabled = false
-  private_dns_zone_soa_record = {
-    email         = "azureprivatedns-host.microsoft.com"
-    expire_time   = 2419200
-    minimum_ttl   = 10
-    refresh_time  = 3600
-    retry_time    = 300
-    serial_number = 1
-    ttl           = 3600
-    tags          = var.tags
-  }
-  dns_zone_soa_record = {
-    email         = "azureprivatedns-host.microsoft.com"
-    expire_time   = 2419200
-    host_name     = "azureprivatedns.net"
-    minimum_ttl   = 10
-    refresh_time  = 3600
-    retry_time    = 300
-    serial_number = 1
-    ttl           = 3600
-  }
-  dns_zone_virtual_network_links = {
-    vnetlinkname = {
-      vnetlinkname     = "${module.ai_lz_vnet.name}-link"
-      vnetid           = module.ai_lz_vnet.resource_id
-      autoregistration = false
-      tags             = var.tags
-    }
-  }
-  dns_zone_txtrecords_resource_configuration = {
-    txt1 = {
-      name    = "example-txt"
-      ttl     = 3600
-      records = ["example=example"]
-      tags    = var.tags
-    }
-  }
-  dns_zone_private_resolver_virtual_network_link = {
-    key1 = {
+      vnetlinkname      = "${module.ai_lz_vnet.name}-link"
+      vnetid            = module.ai_lz_vnet.resource_id
+      autoregistration  = false
       resolution_policy = "NxDomainRedirect" #doing this since the automation build systems aren't privately connected
     }
   }
 }
-
 # Create a jump VM for verifying connectivity to the linked vnet and private connection resources.
 resource "random_integer" "zone_index" {
   max = length(local.region_zones)

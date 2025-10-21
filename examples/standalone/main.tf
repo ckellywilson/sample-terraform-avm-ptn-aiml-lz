@@ -51,8 +51,6 @@ module "naming" {
   version = "0.3.0"
 }
 
-# Get the deployer IP address to allow for public write to the key vault. This is to make sure the tests run.
-# In practice your deployer machine will be on a private network and this will not be required.
 data "http" "ip" {
   url = "https://api.ipify.org/"
   retry {
@@ -62,15 +60,34 @@ data "http" "ip" {
   }
 }
 
+#create a sample hub to mimic an existing network landing zone configuration
+module "example_hub" {
+  source = "../../modules/example_hub_vnet"
+
+  deployer_ip_address = "${data.http.ip.response_body}/32"
+  location            = "australiaeast"
+  resource_group_name = "default-example-${module.naming.resource_group.name_unique}"
+  vnet_definition = {
+    address_space = "10.10.0.0/24"
+  }
+  enable_telemetry = var.enable_telemetry
+  name_prefix      = "${module.naming.resource_group.name_unique}-hub"
+}
+
 module "test" {
-  source  = "Azure/terraform-azurerm-avm-ptn-aiml-landing-zone/azurerm"
-  version = "~> 1.0"
+  source  = "Azure/avm-ptn-aiml-landing-zone/azurerm"
+  version = "~> 0.1"
 
   location            = "australiaeast" #temporarily pinning on australiaeast for capacity limits in test subscription.
-  resource_group_name = "ai-lz-rg-standalone-${substr(module.naming.unique-seed, 0, 5)}"
+  resource_group_name = "ai-lz-rg-default-${substr(module.naming.unique-seed, 0, 5)}"
   vnet_definition = {
-    name          = "ai-lz-vnet-standalone"
-    address_space = "192.168.0.0/23" # has to be out of 192.168.0.0/16 currently. Other RFC1918 not supported for foundry capabilityHost injection.
+    name          = "ai-lz-vnet-default"
+    address_space = "192.168.0.0/23"                                                                 # has to be out of 192.168.0.0/16 currently. Other RFC1918 not supported for foundry capabilityHost injection.
+    dns_servers   = [for key, value in module.example_hub.dns_resolver_inbound_ip_addresses : value] # Use the DNS resolver IPs from the example hub
+    hub_vnet_peering_definition = {
+      peer_vnet_resource_id = module.example_hub.virtual_network_resource_id
+      firewall_ip_address   = module.example_hub.firewall_ip_address
+    }
   }
   ai_foundry_definition = {
     purge_on_destroy = true
@@ -127,9 +144,8 @@ module "test" {
 
     storage_account_definition = {
       this = {
-        enable_diagnostic_settings      = false
-        shared_access_key_enabled       = false # Disable shared key access for security compliance
-        default_to_oauth_authentication = true  # Force OAuth authentication for all operations
+        enable_diagnostic_settings = false
+        shared_access_key_enabled  = true #configured for testing
         endpoints = {
           blob = {
             type = "blob"
@@ -184,43 +200,29 @@ module "test" {
     enable_diagnostic_settings = false
   }
   enable_telemetry           = var.enable_telemetry
-  flag_platform_landing_zone = true
+  flag_platform_landing_zone = false
   genai_container_registry_definition = {
     enable_diagnostic_settings = false
   }
   genai_cosmosdb_definition = {
     enable_diagnostic_settings = false
+    consistency_level          = "Session"
   }
   genai_key_vault_definition = {
-    #this is for AVM testing purposes only. Doing this as we don't have an easy for the test runner to be privately connected for testing.
-    public_network_access_enabled = true
+    public_network_access_enabled = true # configured for testing
     network_acls = {
       bypass   = "AzureServices"
-      ip_rules = ["${data.http.ip.response_body}/32"]
+      ip_rules = ["${data.http.ip.response_body}/32"] # Allow access from the test runner's IP address
     }
   }
   genai_storage_account_definition = {
-    enable_diagnostic_settings      = false
-    shared_access_key_enabled       = false # Disable shared key access for security compliance
-    default_to_oauth_authentication = true  # Force OAuth authentication for all operations
+    enable_diagnostic_settings = false
   }
   ks_ai_search_definition = {
     enable_diagnostic_settings = false
   }
+  private_dns_zones = {
+    existing_zones_resource_group_resource_id = module.example_hub.resource_group_resource_id
+  }
 }
 
-# RBAC: Grant Storage Blob Data Contributor role to current service principal for AI Foundry storage
-resource "azurerm_role_assignment" "ai_foundry_storage_blob_contributor" {
-  count                = length(module.ai_ml_landing_zone.ai_foundry_storage_accounts)
-  scope                = values(module.ai_ml_landing_zone.ai_foundry_storage_accounts)[count.index].resource_id
-  role_definition_name = "Storage Blob Data Contributor"
-  principal_id         = data.azurerm_client_config.current.object_id
-}
-
-# RBAC: Grant Storage Blob Data Contributor role to current service principal for GenAI storage
-resource "azurerm_role_assignment" "genai_storage_blob_contributor" {
-  count                = length(module.ai_ml_landing_zone.genai_storage_accounts)
-  scope                = values(module.ai_ml_landing_zone.genai_storage_accounts)[count.index].resource_id
-  role_definition_name = "Storage Blob Data Contributor"
-  principal_id         = data.azurerm_client_config.current.object_id
-}
