@@ -1,33 +1,29 @@
-# Terraform
-*.tfstate
-*.tfstate.*
-.terraform/
-.terraform.lock.hcl
-tfplan*
-*.tfvars.backup
-*.tfplan
-
-# IDE
+# IDE files - apply globally
 .vscode/
 .idea/
 *.swp
 *.swo
+*~
 
-# OS
+# OS generated files - apply globally
 .DS_Store
+.DS_Store?
+._*
+.Spotlight-V100
+.Trashes
+ehthumbs.db
 Thumbs.db
 
-# Logs
-*.log
-
-# Environment specific
+# Environment files - apply globally
 .env
 .env.local
 .env.*.local
 
 # Note: .env.template is safe to commit (contains no real credentials)
 
+# Log files - apply globally
+*.log
+
 # Temporary files
 temp/
 tmp/
-.azure

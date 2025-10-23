@@ -23,6 +23,20 @@
 		},
 		"ghcr.io/azure/azure-dev/azd:0": {
 			"version": "latest"
+		},
+		"ghcr.io/devcontainers/features/docker-in-docker:2": {
+			"version": "latest",
+			"enableNonRootDocker": "true"
+		}
+	},
+	"customizations": {
+		"vscode": {
+			"extensions": [
+				"ms-azuretools.vscode-cosmosdb",
+				"ms-azuretools.azure-dev",
+				"hashicorp.terraform",
+				"ms-vscode.azurecli"
+			]
 		}
 	}
 

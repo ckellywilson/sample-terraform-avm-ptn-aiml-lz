@@ -24,6 +24,16 @@ Standalone AI/ML landing zone without any hub network dependencies. Perfect for 
 - **Dependencies**: None
 - **Network**: Single VNet with public service access
 
+## 🛠️ [Shared Scripts](./scripts/)
+**Common Utilities for All Examples**
+
+Centralized collection of deployment and operational scripts used across all example scenarios.
+
+- **Prerequisites Validation**: Azure resource provider and feature checks
+- **Resource Management**: Automated provider registration
+- **Security Hardening**: Post-deployment storage account security
+- **CI/CD Integration**: Cross-platform deployment scripts
+
 ### 🔗 [Sample Hub](./sample-hub/)
 **ALZ-based Hub Infrastructure**
 

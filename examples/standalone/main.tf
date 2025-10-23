@@ -64,7 +64,6 @@ data "http" "ip" {
 
 module "test" {
   source = "Azure/avm-ptn-aiml-landing-zone/azurerm"
-  version = "~> 0.1"
 
   location            = "australiaeast" #temporarily pinning on australiaeast for capacity limits in test subscription.
   resource_group_name = "ai-lz-rg-standalone-${substr(module.naming.unique-seed, 0, 5)}"
@@ -183,7 +182,7 @@ module "test" {
     enable_diagnostic_settings = false
   }
   enable_telemetry           = var.enable_telemetry
-  flag_platform_landing_zone = false
+  flag_platform_landing_zone = true
   genai_container_registry_definition = {
     enable_diagnostic_settings = false
   }
