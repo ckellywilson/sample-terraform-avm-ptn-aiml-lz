@@ -1,0 +1,24 @@
+# Terraform files - apply to all examples
+*.tfstate
+*.tfstate.*
+*.tfstate.backup
+*.tfvars
+!*.tfvars.example
+.terraform/
+.terraform.lock.hcl
+terraform.tfplan
+terraform.tfplan.json
+tfplan*
+*.tfvars.backup
+*.tfplan
+crash.log
+crash.*.log
+override.tf
+override.tf.json
+*_override.tf
+*_override.tf.json
+.terraformrc
+terraform.rc
+
+# Azure Developer CLI - apply to all examples
+.azure/

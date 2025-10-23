@@ -1,0 +1,5 @@
+** DEPLOYMENT SCENARIOS PROMPT **
+Advise only. Let's outline deployment scenarios around the following and what resources would be deployed. Use case 1, minimal - only base ai lz components with no model deployment or storage needed. Use case 2 - internal web chat - base gpt model deployment with internal-only containered web application. Use case 3 - external web chat - base gpt model with external-facing, containerized web appliation. Please outline the variable configurations for use-cases 1-4. Please include telemetry for any chat implementation. For instance, if a resource is deployed (i.e. ai foundry project), include its Log analytics workspace and appropriate diagnostics. if a web application is deployed, include application insights. Ensure that these deployment scenarios are selectable by the deployment method (i.e., azd, GitHub Actions, ADO Pipelines).
+
+
+Advise only. Use https://github.com/Azure/terraform-azurerm-avm-ptn-aiml-landing-zone/tree/main as context. Some of the resources in the AVM AI LZ can be marked to NOT deploy. Please list which resources can be disabled for deployment.

@@ -1,0 +1,41 @@
+# Container Apps Deployment Configuration
+apiVersion: apps/v1alpha1
+kind: ContainerApp
+metadata:
+  name: ai-chat-app
+spec:
+  configuration:
+    activeRevisionsMode: single
+    ingress:
+      external: true
+      targetPort: 8000
+    secrets:
+      - name: azure-openai-key
+        value: "your-openai-key"
+      - name: cosmos-db-key  
+        value: "your-cosmos-key"
+      - name: app-insights-connection
+        value: "your-app-insights-connection-string"
+  template:
+    containers:
+      - image: your-registry.azurecr.io/ai-chat-app:latest
+        name: chat-app
+        resources:
+          cpu: 0.5
+          memory: 1Gi
+        env:
+          - name: AZURE_OPENAI_ENDPOINT
+            value: "https://your-openai-resource.openai.azure.com/"
+          - name: AZURE_OPENAI_API_KEY
+            secretRef: azure-openai-key
+          - name: COSMOS_DB_ENDPOINT
+            value: "https://your-cosmos-account.documents.azure.com:443/"
+          - name: COSMOS_DB_KEY
+            secretRef: cosmos-db-key
+          - name: APPLICATIONINSIGHTS_CONNECTION_STRING
+            secretRef: app-insights-connection
+          - name: KEY_VAULT_URL
+            value: "https://your-keyvault.vault.azure.net/"
+    scale:
+      minReplicas: 1
+      maxReplicas: 10
