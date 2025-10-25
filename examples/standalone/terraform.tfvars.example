@@ -1,0 +1,25 @@
+# Azure AI Landing Zone - Standalone Example Configuration
+# Copy this file to terraform.tfvars and modify the subscription_id
+
+# Azure subscription ID where resources will be deployed
+subscription_id = "your-subscription-id-here"
+
+# Azure region for resource deployment
+location = "australiaeast"
+
+# Enable telemetry collection for Azure Verified Modules
+enable_telemetry = true
+
+# Optional: Resource group ID containing existing private DNS zones
+# If not provided, all necessary DNS zones will be created automatically
+# existing_dns_zones_rg_id = "/subscriptions/your-subscription-id/resourceGroups/your-existing-dns-rg"
+
+# Storage security configuration
+# Recommended: Disable shared access keys and use managed identity (Azure Policy compliant)
+storage_shared_access_key_enabled = false
+storage_use_azuread_authentication = true
+
+# Usage:
+# 1. Copy this file: cp terraform.tfvars.example terraform.tfvars
+# 2. Edit terraform.tfvars with your subscription ID
+# 3. Deploy: terraform init && terraform plan && terraform apply

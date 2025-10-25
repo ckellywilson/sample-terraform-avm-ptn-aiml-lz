@@ -18,6 +18,8 @@ terraform {
 }
 
 provider "azurerm" {
+  subscription_id     = var.subscription_id
+  storage_use_azuread = var.storage_use_azuread_authentication
   features {
     resource_group {
       prevent_deletion_if_contains_resources = false
@@ -62,10 +64,20 @@ data "http" "ip" {
   }
 }
 
+# Get current subscription information
+data "azurerm_client_config" "current" {}
+
+# Local values for storage RBAC logic
+locals {
+  # Storage RBAC logic
+  storage_shared_key_disabled = !var.storage_shared_access_key_enabled
+  ai_foundry_requires_storage_rbac = local.storage_shared_key_disabled
+}
+
 module "test" {
   source = "Azure/avm-ptn-aiml-landing-zone/azurerm"
 
-  location            = "australiaeast" #temporarily pinning on australiaeast for capacity limits in test subscription.
+  location            = var.location
   resource_group_name = "ai-lz-rg-standalone-${substr(module.naming.unique-seed, 0, 5)}"
   vnet_definition = {
     name          = "ai-lz-vnet-standalone"
@@ -127,12 +139,25 @@ module "test" {
     storage_account_definition = {
       this = {
         enable_diagnostic_settings = false
-        shared_access_key_enabled  = true #configured for testing
+        shared_access_key_enabled  = var.storage_shared_access_key_enabled
         endpoints = {
           blob = {
             type = "blob"
           }
         }
+        # Automatically assign RBAC roles when shared key access is disabled
+        # role_assignments = local.ai_foundry_requires_storage_rbac ? {
+        #   ai_foundry_storage_blob = {
+        #     role_definition_id_or_name = "Storage Blob Data Contributor"
+        #     principal_id               = module.test.ai_foundry_principal_id
+        #     description                = "AI Foundry managed identity access to storage blobs"
+        #   }
+        #   ai_foundry_storage_file = {
+        #     role_definition_id_or_name = "Storage File Data Privileged Contributor"
+        #     principal_id               = module.test.ai_foundry_principal_id
+        #     description                = "AI Foundry managed identity access to storage files"
+        #   }
+        # } : {}
       }
     }
   }
@@ -182,7 +207,14 @@ module "test" {
     enable_diagnostic_settings = false
   }
   enable_telemetry           = var.enable_telemetry
-  flag_platform_landing_zone = true
+  flag_platform_landing_zone = false  # Standalone deployments are always self-contained (no platform infrastructure)
+  
+  # DNS zones configuration for standalone deployment
+  private_dns_zones = {
+    existing_zones_resource_group_resource_id = var.existing_dns_zones_rg_id != null ? var.existing_dns_zones_rg_id : azurerm_resource_group.dns_zones[0].id
+    allow_internet_resolution_fallback = false
+  }
+  
   genai_container_registry_definition = {
     enable_diagnostic_settings = false
   }
