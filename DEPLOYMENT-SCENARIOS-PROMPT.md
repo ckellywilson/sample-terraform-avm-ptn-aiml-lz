@@ -3,3 +3,5 @@ Advise only. Let's outline deployment scenarios around the following and what re
 
 
 Advise only. Use https://github.com/Azure/terraform-azurerm-avm-ptn-aiml-landing-zone/tree/main as context. Some of the resources in the AVM AI LZ can be marked to NOT deploy. Please list which resources can be disabled for deployment.
+
+Advise first. Check https://github.com/Azure/terraform-azurerm-avm-ptn-aiml-landing-zone for reference to the avm module and https://learn.microsoft.com/en-us/azure/ai-foundry/how-to/evaluations-storage-account to see how to assign RBAC for AI Foundry. We need to assign the RBAC permissions to read the storage account. How do we do that?
