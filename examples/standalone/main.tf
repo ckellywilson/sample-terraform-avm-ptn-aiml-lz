@@ -70,12 +70,12 @@ data "azurerm_client_config" "current" {}
 # Local values for storage RBAC logic
 locals {
   # Storage RBAC logic
-  storage_shared_key_disabled = !var.storage_shared_access_key_enabled
+  storage_shared_key_disabled      = !var.storage_shared_access_key_enabled
   ai_foundry_requires_storage_rbac = local.storage_shared_key_disabled
 }
 
 module "test" {
-  source = "Azure/avm-ptn-aiml-landing-zone/azurerm"
+  source = "github.com/ckellywilson/terraform-azurerm-avm-ptn-aiml-landing-zone"
 
   location            = var.location
   resource_group_name = "ai-lz-rg-standalone-${substr(module.naming.unique-seed, 0, 5)}"
@@ -207,14 +207,14 @@ module "test" {
     enable_diagnostic_settings = false
   }
   enable_telemetry           = var.enable_telemetry
-  flag_platform_landing_zone = false  # Standalone deployments are always self-contained (no platform infrastructure)
-  
+  flag_platform_landing_zone = false # Standalone deployments are always self-contained (no platform infrastructure)
+
   # DNS zones configuration for standalone deployment
   private_dns_zones = {
     existing_zones_resource_group_resource_id = var.existing_dns_zones_rg_id != null ? var.existing_dns_zones_rg_id : azurerm_resource_group.dns_zones[0].id
-    allow_internet_resolution_fallback = false
+    allow_internet_resolution_fallback        = false
   }
-  
+
   genai_container_registry_definition = {
     enable_diagnostic_settings = false
   }

@@ -25,17 +25,6 @@ variable "existing_dns_zones_rg_id" {
   default     = null
 }
 
-variable "subscription_id" {
-  type        = string
-  description = "The Azure subscription ID to deploy resources into."
-}
-
-variable "existing_dns_zones_rg_id" {
-  type        = string
-  description = "Resource group ID containing existing DNS zones. If not provided, DNS zones will be created automatically."
-  default     = null
-}
-
 variable "storage_shared_access_key_enabled" {
   type        = bool
   description = "Whether to enable shared access keys for storage accounts. When false (disabled), AI Foundry will use managed identity for storage access and appropriate RBAC roles will be assigned automatically."
