@@ -145,19 +145,6 @@ module "test" {
             type = "blob"
           }
         }
-        # Automatically assign RBAC roles when shared key access is disabled
-        # role_assignments = local.ai_foundry_requires_storage_rbac ? {
-        #   ai_foundry_storage_blob = {
-        #     role_definition_id_or_name = "Storage Blob Data Contributor"
-        #     principal_id               = module.test.ai_foundry_principal_id
-        #     description                = "AI Foundry managed identity access to storage blobs"
-        #   }
-        #   ai_foundry_storage_file = {
-        #     role_definition_id_or_name = "Storage File Data Privileged Contributor"
-        #     principal_id               = module.test.ai_foundry_principal_id
-        #     description                = "AI Foundry managed identity access to storage files"
-        #   }
-        # } : {}
       }
     }
   }
