@@ -18,6 +18,8 @@ terraform {
 }
 
 provider "azurerm" {
+  subscription_id     = var.subscription_id
+  storage_use_azuread = var.storage_use_azuread_authentication
   features {
     resource_group {
       prevent_deletion_if_contains_resources = false
@@ -60,25 +62,37 @@ data "http" "ip" {
   }
 }
 
+# Get current subscription information
+data "azurerm_client_config" "current" {}
+
+# Local values for storage RBAC logic
+locals {
+  # Storage RBAC logic
+  storage_shared_key_disabled      = !var.storage_shared_access_key_enabled
+  ai_foundry_requires_storage_rbac = local.storage_shared_key_disabled
+}
+
 #create a sample hub to mimic an existing network landing zone configuration
 module "example_hub" {
   source = "../../modules/example_hub_vnet"
 
   deployer_ip_address = "${data.http.ip.response_body}/32"
-  location            = "australiaeast"
+  location            = var.location
   resource_group_name = "default-example-${module.naming.resource_group.name_unique}"
   vnet_definition = {
     address_space = "10.10.0.0/24"
+  }
+  jump_vm_definition = {
+    sku = "Standard_D2s_v6"
   }
   enable_telemetry = var.enable_telemetry
   name_prefix      = "${module.naming.resource_group.name_unique}-hub"
 }
 
 module "test" {
-  source  = "Azure/avm-ptn-aiml-landing-zone/azurerm"
-  version = "~> 0.1"
+  source = "github.com/ckellywilson/terraform-azurerm-avm-ptn-aiml-landing-zone"
 
-  location            = "australiaeast" #temporarily pinning on australiaeast for capacity limits in test subscription.
+  location            = var.location
   resource_group_name = "ai-lz-rg-default-${substr(module.naming.unique-seed, 0, 5)}"
   vnet_definition = {
     name          = "ai-lz-vnet-default"
@@ -145,7 +159,7 @@ module "test" {
     storage_account_definition = {
       this = {
         enable_diagnostic_settings = false
-        shared_access_key_enabled  = true #configured for testing
+        shared_access_key_enabled  = var.storage_shared_access_key_enabled
         endpoints = {
           blob = {
             type = "blob"
@@ -196,11 +210,18 @@ module "test" {
   }
   bastion_definition = {
   }
+  buildvm_definition = {
+    sku = "Standard_D2s_v6"
+  }
   container_app_environment_definition = {
     enable_diagnostic_settings = false
   }
+  jumpvm_definition = {
+    sku = "Standard_D2s_v6"
+  }
   enable_telemetry           = var.enable_telemetry
-  flag_platform_landing_zone = false
+  flag_platform_landing_zone = true
+  use_internet_routing        = var.use_internet_routing
   genai_container_registry_definition = {
     enable_diagnostic_settings = false
   }
