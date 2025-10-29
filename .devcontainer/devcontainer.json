@@ -27,6 +27,9 @@
 		"ghcr.io/devcontainers/features/docker-in-docker:2": {
 			"version": "latest",
 			"enableNonRootDocker": "true"
+		},
+		"ghcr.io/devcontainers/features/github-cli:1": {
+			"version": "latest"
 		}
 	},
 	"customizations": {
