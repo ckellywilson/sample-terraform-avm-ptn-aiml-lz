@@ -1,0 +1,19 @@
+name: sample-terraform-avm-ptn-aiml-lz
+# Azure Developer CLI project configuration.
+# This file integrates the existing Terraform in examples/default with azd provisioning.
+# Adjust the terraform version constraint as needed for your environment.
+infra:
+  provider: terraform
+  path: examples/default
+  terraform:
+    version: ">=1.5.0"
+hooks:
+  preprovision:
+    posix:
+      shell: sh
+      run: ./scripts/check-prerequisites.sh || echo "Prerequisites check script completed (non-blocking)."
+    windows:
+      shell: pwsh
+      run: echo "(Optional) add Windows prerequisite checks here"
+# Services list is empty because this sample currently provisions only infrastructure.
+services: {}
