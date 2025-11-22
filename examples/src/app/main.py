@@ -5,9 +5,7 @@ from app.routers import chat, network
 from app.config import config_manager
 import logging
 import os
-from azure.monitor.opentelemetry import configure_azure_monitor
-from opentelemetry import trace
-from opentelemetry.instrumentation.fastapi import FastAPIInstrumentor
+import time
 
 # Configure logging
 logging.basicConfig(
@@ -23,25 +21,12 @@ def create_app() -> FastAPI:
     # Load configuration
     config_manager.load_azure_config()
     
-    # Configure Azure Monitor if connection string is available
-    if config_manager.settings.applicationinsights_connection_string:
-        try:
-            configure_azure_monitor(
-                connection_string=config_manager.settings.applicationinsights_connection_string
-            )
-            logger.info("Application Insights configured successfully")
-        except Exception as e:
-            logger.error(f"Failed to configure Application Insights: {e}")
-    
     # Create FastAPI app
     app = FastAPI(
         title="AI Landing Zone Chat Application",
         description="Chat application with network connectivity testing for Azure AI Landing Zone",
         version="1.0.0"
     )
-    
-    # Instrument FastAPI with OpenTelemetry
-    FastAPIInstrumentor.instrument_app(app)
     
     # Include routers
     app.include_router(chat.router)
@@ -72,12 +57,7 @@ def create_app() -> FastAPI:
         logger.info("Starting AI Landing Zone Chat Application")
         logger.info(f"Azure OpenAI Endpoint: {config_manager.settings.azure_openai_endpoint}")
         logger.info(f"Cosmos DB Endpoint: {config_manager.settings.cosmos_db_endpoint}")
-        logger.info(f"Application Insights: {'Configured' if config_manager.settings.applicationinsights_connection_string else 'Not configured'}")
-        
-        # Log startup event to Application Insights
-        tracer = trace.get_tracer(__name__)
-        with tracer.start_as_current_span("application_startup"):
-            logger.info("Application startup completed")
+        logger.info("Application startup completed")
     
     @app.middleware("http")
     async def log_requests(request: Request, call_next):

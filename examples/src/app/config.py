@@ -22,9 +22,6 @@ class Settings(BaseSettings):
     cosmos_db_database: str = "chathistory"
     cosmos_db_container: str = "conversations"
     
-    # Application Insights
-    applicationinsights_connection_string: Optional[str] = None
-    
     # Key Vault settings (for retrieving secrets)
     key_vault_url: Optional[str] = None
     
@@ -44,6 +41,7 @@ class Settings(BaseSettings):
     class Config:
         env_file = ".env"
         case_sensitive = False
+        extra = "ignore"  # Allow extra environment variables
 
 
 class ConfigManager:
@@ -103,10 +101,6 @@ class ConfigManager:
             self.settings.cosmos_db_endpoint = self.get_secret("cosmos-db-endpoint")
         if not self.settings.cosmos_db_key:
             self.settings.cosmos_db_key = self.get_secret("cosmos-db-key")
-            
-        # Load Application Insights config
-        if not self.settings.applicationinsights_connection_string:
-            self.settings.applicationinsights_connection_string = self.get_secret("applicationinsights-connection-string")
 
 
 # Global configuration instance

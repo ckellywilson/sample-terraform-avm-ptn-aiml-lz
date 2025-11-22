@@ -44,11 +44,9 @@ az containerapp create \
   --secrets \
     azure-openai-key="$AZURE_OPENAI_API_KEY" \
     cosmos-db-key="$COSMOS_DB_KEY" \
-    app-insights-connection="$APPLICATIONINSIGHTS_CONNECTION_STRING" \
   --secret-env-vars \
     AZURE_OPENAI_API_KEY=azure-openai-key \
-    COSMOS_DB_KEY=cosmos-db-key \
-    APPLICATIONINSIGHTS_CONNECTION_STRING=app-insights-connection
+    COSMOS_DB_KEY=cosmos-db-key
 
 echo "Deployment completed!"
 echo "App URL: https://$APP_NAME.$(az containerapp env show --name $CONTAINER_APP_ENV --resource-group $RESOURCE_GROUP --query properties.defaultDomain -o tsv)"
