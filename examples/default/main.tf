@@ -15,6 +15,10 @@ terraform {
       version = "~> 3.5"
     }
   }
+
+  # Backend configuration is managed by ensure-remote-state.sh
+  # Configuration is passed via backend config file or terraform init parameters
+  backend "azurerm" {}
 }
 
 provider "azurerm" {

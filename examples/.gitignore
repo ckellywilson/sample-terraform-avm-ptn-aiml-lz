@@ -22,3 +22,5 @@ terraform.rc
 
 # Azure Developer CLI - apply to all examples
 .azure/
+# Auto-generated backend configuration
+backend.tfvars
