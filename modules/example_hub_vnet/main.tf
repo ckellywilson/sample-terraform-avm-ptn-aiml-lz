@@ -63,6 +63,7 @@ resource "azurerm_bastion_host" "bastion" {
   location            = azurerm_resource_group.this.location
   name                = local.bastion_name
   resource_group_name = azurerm_resource_group.this.name
+  sku                 = "Basic"
   tags                = var.tags
 
   ip_configuration {
@@ -190,6 +191,13 @@ module "jumpvm" {
 
   location = azurerm_resource_group.this.location
   name     = local.jump_vm_name
+  os_type  = try(var.jump_vm_definition.os_type, "Linux")
+  source_image_reference = try(var.jump_vm_definition.os_type, "Linux") == "Windows" ? {
+    publisher = "MicrosoftWindowsDesktop"
+    offer     = "Windows-11"
+    sku       = "win11-23h2-pro"
+    version   = "latest"
+  } : null
   network_interfaces = {
     network_interface_1 = {
       name = "${local.jump_vm_name}-nic1"
