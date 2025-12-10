@@ -87,7 +87,8 @@ module "example_hub" {
     address_space = "10.10.0.0/24"
   }
   jump_vm_definition = {
-    sku = "Standard_D2s_v6"
+    sku     = "Standard_D8ds_v6" # Supports nested virtualization, no zone restrictions
+    os_type = "Windows"
   }
   enable_telemetry = var.enable_telemetry
   name_prefix      = "${module.naming.resource_group.name_unique}-hub"
