@@ -7,13 +7,36 @@ infra:
   path: examples/default
   terraform:
     version: ">=1.5.0"
+    backendConfig:
+      - backend.tfvars
 hooks:
   preprovision:
     posix:
       shell: sh
-      run: ./scripts/check-prerequisites.sh || echo "Prerequisites check script completed (non-blocking)."
+      run: |
+        ./scripts/check-prerequisites.sh || echo "Prerequisites check script completed (non-blocking)."
+        ./scripts/ensure-remote-state.sh
     windows:
       shell: pwsh
-      run: echo "(Optional) add Windows prerequisite checks here"
+      run: |
+        Write-Host "(Optional) add Windows prerequisite checks here"
+        Write-Host "Remote state setup not yet implemented for Windows"
+  postdown:
+    posix:
+      shell: sh
+      run: |
+        echo ""
+        echo "⚠️  Note: Terraform state storage (tfstate-rg-aiml-lz) was NOT deleted."
+        echo "   This preserves your state history for potential recovery."
+        echo "   To manually delete the state storage, run:"
+        echo "   az group delete --name tfstate-rg-aiml-lz --yes"
+        echo ""
+    windows:
+      shell: pwsh
+      run: |
+        Write-Host ""
+        Write-Host "⚠️  Note: Terraform state storage (tfstate-rg-aiml-lz) was NOT deleted."
+        Write-Host "   To manually delete: az group delete --name tfstate-rg-aiml-lz --yes"
+        Write-Host ""
 # Services list is empty because this sample currently provisions only infrastructure.
 services: {}
