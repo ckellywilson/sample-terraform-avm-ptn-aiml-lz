@@ -22,3 +22,13 @@ output "virtual_network_resource_id" {
   description = "Azure Resource ID for the hub virtual network"
   value       = module.ai_lz_vnet.resource_id
 }
+
+output "virtual_network_name" {
+  description = "The name of the hub virtual network"
+  value       = module.ai_lz_vnet.name
+}
+
+output "resource_group_name" {
+  description = "The name of the resource group where the hub virtual network is deployed"
+  value       = azurerm_resource_group.this.name
+}

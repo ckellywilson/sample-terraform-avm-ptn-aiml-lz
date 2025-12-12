@@ -27,3 +27,31 @@ Thumbs.db
 # Temporary files
 temp/
 tmp/
+
+# Terraform state files - apply globally
+*.tfstate
+*.tfstate.*
+*.tfstate.backup
+
+# Terraform directory
+.terraform/
+.terraform.lock.hcl
+
+# Terraform variable files (except examples)
+*.tfvars
+!terraform.tfvars.example
+!*.tfvars.example
+
+# Auto-generated backend configuration files (environment-specific)
+backend.tf
+backend.tfvars
+backend.env
+
+# Terraform plan files
+*.tfplan
+tfplan
+*.tfplan.json
+
+# Azure Developer CLI environment files (contain subscription IDs)
+.azure/*/
+!.azure/.env.sample

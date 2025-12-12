@@ -161,7 +161,7 @@ module "private_resolver" {
     }
   }
 }
-# Create the Private DNS zones and link to the hub VNet
+# Create the Private DNS zones and link to the hub VNet and any spoke VNets
 module "private_dns_zones" {
   source   = "Azure/avm-res-network-privatednszone/azurerm"
   version  = "0.3.4"
@@ -170,14 +170,25 @@ module "private_dns_zones" {
   domain_name         = each.value.name
   resource_group_name = azurerm_resource_group.this.name
   enable_telemetry    = var.enable_telemetry
-  virtual_network_links = {
-    alz_vnet_link = {
-      vnetlinkname      = "${module.ai_lz_vnet.name}-link"
-      vnetid            = module.ai_lz_vnet.resource_id
-      autoregistration  = false
-      resolution_policy = "NxDomainRedirect" #doing this since the automation build systems aren't privately connected
+  virtual_network_links = merge(
+    {
+      hub_vnet_link = {
+        vnetlinkname      = "${module.ai_lz_vnet.name}-link"
+        vnetid            = module.ai_lz_vnet.resource_id
+        autoregistration  = false
+        resolution_policy = "NxDomainRedirect" #doing this since the automation build systems aren't privately connected
+      }
+    },
+    {
+      for idx, spoke_vnet_id in var.spoke_vnet_resource_ids :
+      "spoke_vnet_link_${idx}" => {
+        vnetlinkname      = "${split("/", spoke_vnet_id)[8]}-link"
+        vnetid            = spoke_vnet_id
+        autoregistration  = false
+        resolution_policy = "Default"
+      }
     }
-  }
+  )
 }
 # Create a jump VM for verifying connectivity to the linked vnet and private connection resources.
 resource "random_integer" "zone_index" {
@@ -197,7 +208,12 @@ module "jumpvm" {
     offer     = "Windows-11"
     sku       = "win11-23h2-pro"
     version   = "latest"
-  } : null
+  } : {
+    publisher = "Canonical"
+    offer     = "0001-com-ubuntu-server-jammy"
+    sku       = "22_04-lts-gen2"
+    version   = "latest"
+  }
   network_interfaces = {
     network_interface_1 = {
       name = "${local.jump_vm_name}-nic1"

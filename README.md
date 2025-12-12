@@ -1,29 +1,128 @@
 # Azure AI/ML Landing Zone
 
-A simplified example repository demonstrating the Azure AI/ML Landing Zone pattern using Azure Verified Modules (AVM).
+Example deployment of Azure AI/ML Landing Zone using [Azure Verified Modules (AVM)](https://aka.ms/avm).
 
-## Structure
+## Quick Start
 
-- `examples/standalone/` - True standalone deployment of AI/ML Landing Zone without hub dependencies
-- `examples/default/` - Example deployment that integrates with an existing hub VNet
-- `modules/example_hub_vnet/` - Supporting hub VNet module for the default example
+### Prerequisites
+- [Azure CLI](https://learn.microsoft.com/cli/azure/install-azure-cli)
+- [Azure Developer CLI (azd)](https://learn.microsoft.com/azure/developer/azure-developer-cli/install-azd)
+- [Terraform](https://developer.hashicorp.com/terraform/install) >= 1.5.0
 
-## Getting Started
+### Setup (One-Time)
 
-### Deploy with Azure Developer CLI (azd)
+**Single Source of Truth: GitHub Environment**
 
-This repository can be provisioned using the Azure Developer CLI against the Terraform configuration in `examples/default`.
+This repository uses GitHub Environments as the single source of truth for configuration. Both local (azd) and CI/CD (GitHub Actions) reference the same values.
 
-1. Install azd: https://learn.microsoft.com/azure/developer/azure-developer-cli/install-azd
-2. Authenticate: `az login` (ensure the correct subscription is selected) and optionally `az account set --subscription <id>`.
-3. Initialize the project (non-interactive): `azd init --no-prompt` (uses existing `azure.yaml`).
-4. Create an environment: `azd env new default`.
-5. Copy `.azure/.env.sample` to `.azure/env/default/.env` and set `AZURE_SUBSCRIPTION_ID` plus any optional values.
-6. Provision infrastructure: `azd provision` (runs Terraform init/plan/apply under the hood).
+#### 1. Configure GitHub Environment
 
-To destroy resources later run: `azd down`.
+```
+Repository Settings → Environments → Create "default"
 
-Notes:
-- Remote state is not yet configured; for team usage introduce an Azure Storage backend and update Terraform accordingly.
-- The `services` section in `azure.yaml` is empty because this sample focuses on infrastructure only.
-- Add additional `TF_VAR_` mappings in `.azure/.env` as new variables are introduced.
+Add Secrets:
+- AZURE_SUBSCRIPTION_ID = "your-subscription-id"
+- AZURE_TENANT_ID = "your-tenant-id"
+- AZURE_CLIENT_ID = "your-client-id" (for OIDC)
+
+Add Variables:
+- AZURE_LOCATION = "eastus2"
+```
+
+#### 2. Create Remote State Storage
+
+```bash
+# Authenticate and set subscription
+az login
+export AZURE_SUBSCRIPTION_ID="your-subscription-id"  # From GitHub Environment
+az account set --subscription $AZURE_SUBSCRIPTION_ID
+
+# Create state storage (one-time per subscription)
+cd examples/default
+../../scripts/ensure-remote-state.sh
+```
+
+#### 3. Configure Local azd Environment
+
+```bash
+# Initialize azd
+cd ../..
+azd init --no-prompt
+azd env new default
+
+# Copy environment template and fill from GitHub Environment values
+cp .azure/.env.sample .azure/default/.env
+# Edit .azure/default/.env:
+#   - Copy AZURE_SUBSCRIPTION_ID from GitHub Environment secrets
+#   - Copy AZURE_LOCATION from GitHub Environment variables
+```
+
+### Deploy
+
+```bash
+azd provision
+```
+
+This runs a 2-phase deployment:
+1. **Phase 1**: Creates hub VNet, spoke VNet, AI Foundry, and all infrastructure
+2. **Phase 2**: Links hub DNS zones to spoke VNet for full connectivity
+
+### Cleanup
+
+```bash
+azd down
+```
+
+## Repository Structure
+
+- `examples/default/` - Hub-spoke deployment (default for `azd`)
+- `examples/standalone/` - Standalone deployment without hub
+- `examples/enterprise/` - Split platform/workload deployment
+- `modules/example_hub_vnet/` - Supporting hub VNet module
+
+## What Gets Deployed
+
+**Hub VNet:**
+- Azure Firewall
+- Azure Bastion
+- DNS Resolver
+- Windows 11 Jump VM
+- 21 Private DNS zones
+
+**Spoke VNet (AI/ML Landing Zone):**
+- AI Foundry workspace and project
+- Container Registry (ACR)
+- Storage Account
+- Key Vault
+- Cosmos DB
+- AI Search
+- Container Apps Environment
+- Private endpoints for all services
+
+## Common Issues
+
+**Backend configuration not found**
+```bash
+cd examples/default && ../../scripts/ensure-remote-state.sh
+```
+
+**Subscription mismatch**
+Ensure `.azure/default/.env` and `terraform.tfvars` use the same subscription ID.
+
+**DNS not resolving after deployment**
+The postprovision hook automatically runs Phase 2. If it fails, run manually:
+```bash
+cd examples/default
+terraform plan
+terraform apply
+```
+
+## Documentation
+
+- [Detailed Deployment Guide](.github/copilot-instructions.md) - Step-by-step instructions
+- [Implementation Guide](IMPLEMENTATION_GUIDE.md) - Technical architecture details
+- [Contributing](CONTRIBUTING.md) - Contribution guidelines
+
+## License
+
+This project is licensed under the MIT License.

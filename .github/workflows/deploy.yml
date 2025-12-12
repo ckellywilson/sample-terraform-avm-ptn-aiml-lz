@@ -1,0 +1,106 @@
+name: Deploy AI/ML Landing Zone
+
+on:
+  push:
+    branches:
+      - main
+  pull_request:
+    branches:
+      - main
+  workflow_dispatch:
+
+permissions:
+  id-token: write  # Required for OIDC authentication
+  contents: read
+
+env:
+  TERRAFORM_VERSION: "~1.9"
+
+jobs:
+  deploy:
+    name: Deploy Infrastructure
+    runs-on: ubuntu-latest
+    environment: default  # Single source of truth for environment configuration
+    
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+      
+      - name: Azure Login (OIDC)
+        uses: azure/login@v2
+        with:
+          client-id: ${{ secrets.AZURE_CLIENT_ID }}
+          tenant-id: ${{ secrets.AZURE_TENANT_ID }}
+          subscription-id: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
+      
+      - name: Setup Terraform
+        uses: hashicorp/setup-terraform@v3
+        with:
+          terraform_version: ${{ env.TERRAFORM_VERSION }}
+      
+      - name: Check Prerequisites
+        working-directory: examples/default
+        run: |
+          echo "Checking Azure resource provider registrations..."
+          ../../scripts/check-prerequisites.sh || echo "Prerequisites check completed (non-blocking)"
+      
+      - name: Ensure Remote State Backend
+        working-directory: examples/default
+        env:
+          AZURE_SUBSCRIPTION_ID: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
+          AZURE_LOCATION: ${{ vars.AZURE_LOCATION }}
+        run: |
+          echo "Setting up Terraform remote state backend..."
+          ../../scripts/ensure-remote-state.sh
+      
+      - name: Terraform Init
+        working-directory: examples/default
+        run: terraform init
+      
+      - name: Terraform Validate
+        working-directory: examples/default
+        run: terraform validate
+      
+      - name: Terraform Plan (Phase 1)
+        working-directory: examples/default
+        env:
+          TF_VAR_subscription_id: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
+          TF_VAR_location: ${{ vars.AZURE_LOCATION }}
+        run: terraform plan -out=tfplan
+      
+      - name: Terraform Apply (Phase 1)
+        if: github.ref == 'refs/heads/main' && github.event_name == 'push'
+        working-directory: examples/default
+        env:
+          TF_VAR_subscription_id: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
+          TF_VAR_location: ${{ vars.AZURE_LOCATION }}
+        run: |
+          terraform apply tfplan
+          rm -f tfplan
+      
+      - name: Terraform Plan (Phase 2 - DNS Zone Links)
+        if: github.ref == 'refs/heads/main' && github.event_name == 'push'
+        working-directory: examples/default
+        env:
+          TF_VAR_subscription_id: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
+          TF_VAR_location: ${{ vars.AZURE_LOCATION }}
+        run: terraform plan -out=phase2.tfplan
+      
+      - name: Terraform Apply (Phase 2 - DNS Zone Links)
+        if: github.ref == 'refs/heads/main' && github.event_name == 'push'
+        working-directory: examples/default
+        env:
+          TF_VAR_subscription_id: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
+          TF_VAR_location: ${{ vars.AZURE_LOCATION }}
+        run: |
+          terraform apply phase2.tfplan
+          rm -f phase2.tfplan
+      
+      - name: Display Outputs
+        if: github.ref == 'refs/heads/main' && github.event_name == 'push'
+        working-directory: examples/default
+        run: |
+          echo "Deployment completed successfully!"
+          echo ""
+          echo "Terraform Outputs:"
+          terraform output

@@ -1,0 +1,138 @@
+name: Deploy AI/ML Landing Zone
+
+on:
+  workflow_dispatch:
+    inputs:
+      environment:
+        description: 'Environment to deploy'
+        required: true
+        default: 'dev'
+        type: choice
+        options:
+          - dev
+          - staging
+          - prod
+
+permissions:
+  id-token: write
+  contents: read
+
+jobs:
+  phase1-deploy:
+    name: 'Phase 1: Deploy Infrastructure'
+    runs-on: ubuntu-latest
+    environment: ${{ github.event.inputs.environment }}
+    
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Azure Login
+        uses: azure/login@v2
+        with:
+          client-id: ${{ secrets.AZURE_CLIENT_ID }}
+          tenant-id: ${{ secrets.AZURE_TENANT_ID }}
+          subscription-id: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
+
+      - name: Setup Terraform
+        uses: hashicorp/setup-terraform@v3
+        with:
+          terraform_version: "~1.9"
+
+      - name: Check Prerequisites
+        run: |
+          cd examples/scripts
+          chmod +x check-prerequisites.sh
+          ./check-prerequisites.sh
+
+      - name: Setup Remote State
+        env:
+          AZURE_SUBSCRIPTION_ID: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
+        run: |
+          cd examples/default
+          chmod +x ../scripts/ensure-remote-state.sh
+          ../scripts/ensure-remote-state.sh
+
+      - name: Terraform Init
+        working-directory: examples/default
+        run: terraform init
+
+      - name: Terraform Plan - Phase 1
+        working-directory: examples/default
+        env:
+          TF_VAR_subscription_id: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
+          TF_VAR_location: ${{ vars.AZURE_LOCATION || 'eastus2' }}
+          TF_VAR_enable_spoke_dns_links: "false"
+          TF_VAR_enable_telemetry: ${{ vars.TF_VAR_ENABLE_TELEMETRY || 'true' }}
+          TF_VAR_storage_use_azuread_authentication: "true"
+          TF_VAR_storage_shared_access_key_enabled: "false"
+        run: |
+          terraform plan -out=phase1.tfplan
+
+      - name: Terraform Apply - Phase 1
+        working-directory: examples/default
+        env:
+          TF_VAR_subscription_id: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
+          TF_VAR_location: ${{ vars.AZURE_LOCATION || 'eastus2' }}
+          TF_VAR_enable_spoke_dns_links: "false"
+          TF_VAR_enable_telemetry: ${{ vars.TF_VAR_ENABLE_TELEMETRY || 'true' }}
+          TF_VAR_storage_use_azuread_authentication: "true"
+          TF_VAR_storage_shared_access_key_enabled: "false"
+        run: |
+          terraform apply -auto-approve phase1.tfplan
+
+  phase2-dns-links:
+    name: 'Phase 2: Configure DNS Zone Links'
+    runs-on: ubuntu-latest
+    needs: phase1-deploy
+    environment: ${{ github.event.inputs.environment }}
+    
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Azure Login
+        uses: azure/login@v2
+        with:
+          client-id: ${{ secrets.AZURE_CLIENT_ID }}
+          tenant-id: ${{ secrets.AZURE_TENANT_ID }}
+          subscription-id: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
+
+      - name: Setup Terraform
+        uses: hashicorp/setup-terraform@v3
+        with:
+          terraform_version: "~1.9"
+
+      - name: Terraform Init
+        working-directory: examples/default
+        run: terraform init
+
+      - name: Terraform Plan - Phase 2
+        working-directory: examples/default
+        env:
+          TF_VAR_subscription_id: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
+          TF_VAR_location: ${{ vars.AZURE_LOCATION || 'eastus2' }}
+          TF_VAR_enable_spoke_dns_links: "true"
+          TF_VAR_enable_telemetry: ${{ vars.TF_VAR_ENABLE_TELEMETRY || 'true' }}
+          TF_VAR_storage_use_azuread_authentication: "true"
+          TF_VAR_storage_shared_access_key_enabled: "false"
+        run: |
+          terraform plan -out=phase2.tfplan
+
+      - name: Terraform Apply - Phase 2
+        working-directory: examples/default
+        env:
+          TF_VAR_subscription_id: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
+          TF_VAR_location: ${{ vars.AZURE_LOCATION || 'eastus2' }}
+          TF_VAR_enable_spoke_dns_links: "true"
+          TF_VAR_enable_telemetry: ${{ vars.TF_VAR_ENABLE_TELEMETRY || 'true' }}
+          TF_VAR_storage_use_azuread_authentication: "true"
+          TF_VAR_storage_shared_access_key_enabled: "false"
+        run: |
+          terraform apply -auto-approve phase2.tfplan
+
+      - name: Verify DNS Configuration
+        working-directory: examples/default
+        run: |
+          echo "Deployment complete! DNS zone links should now be configured."
+          terraform output

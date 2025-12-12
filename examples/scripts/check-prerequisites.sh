@@ -118,19 +118,32 @@ echo "🔍 Checking special features..."
 # Check EncryptionAtHost feature
 echo -n "   Checking EncryptionAtHost feature... "
 encryption_status=$(az feature show --namespace Microsoft.Compute --name EncryptionAtHost --query properties.state -o tsv 2>/dev/null || echo "NotFound")
+encryption_feature_missing=false
 
 case $encryption_status in
     "Registered")
         echo -e "${GREEN}✅ Registered${NC}"
+        # Verify Microsoft.Compute provider is re-registered after feature registration
+        echo -n "   Verifying Microsoft.Compute provider propagation... "
+        compute_provider_state=$(az provider show --namespace Microsoft.Compute --query registrationState -o tsv 2>/dev/null || echo "NotFound")
+        if [ "$compute_provider_state" == "Registered" ]; then
+            echo -e "${GREEN}✅ Propagated${NC}"
+        else
+            echo -e "${YELLOW}⚠️  Provider needs re-registration${NC}"
+            echo -e "${YELLOW}   Run: az provider register --namespace Microsoft.Compute --wait${NC}"
+        fi
         ;;
     "Registering")
         echo -e "${YELLOW}⏳ Registering (in progress)${NC}"
+        encryption_feature_missing=true
         ;;
     "NotRegistered"|"NotFound")
-        echo -e "${YELLOW}⚠️  Not registered (required for Build/Jump VMs)${NC}"
+        echo -e "${RED}❌ Not registered (REQUIRED for Build/Jump VMs)${NC}"
+        encryption_feature_missing=true
         ;;
     *)
         echo -e "${YELLOW}⚠️  Unknown status: $encryption_status${NC}"
+        encryption_feature_missing=true
         ;;
 esac
 
@@ -138,11 +151,11 @@ echo ""
 echo "📊 Summary"
 echo "=========="
 
-if [ ${#MISSING_PROVIDERS[@]} -eq 0 ] && [ ${#UNREGISTERED_PROVIDERS[@]} -eq 0 ]; then
-    echo -e "${GREEN}✅ All required resource providers are registered!${NC}"
+if [ ${#MISSING_PROVIDERS[@]} -eq 0 ] && [ ${#UNREGISTERED_PROVIDERS[@]} -eq 0 ] && [ "$encryption_feature_missing" == "false" ]; then
+    echo -e "${GREEN}✅ All required resource providers and features are registered!${NC}"
     echo "   Your subscription is ready for AI/ML Landing Zone deployment."
 else
-    echo -e "${RED}❌ Missing or unregistered resource providers found${NC}"
+    echo -e "${RED}❌ Missing or unregistered resource providers/features found${NC}"
     
     if [ ${#MISSING_PROVIDERS[@]} -gt 0 ]; then
         echo ""
@@ -188,18 +201,25 @@ if [ ${#MISSING_PROVIDERS[@]} -gt 0 ]; then
     echo ""
 fi
 
-if [ "$encryption_status" != "Registered" ]; then
-    echo -e "${BLUE}To enable Build VM and Jump VM deployment:${NC}"
+if [ "$encryption_feature_missing" == "true" ]; then
+    echo -e "${BLUE}To enable EncryptionAtHost feature (required for Build/Jump VMs):${NC}"
+    echo ""
+    echo "   # Step 1: Register the feature"
     echo "   az feature register --namespace Microsoft.Compute --name EncryptionAtHost"
-    echo "   az provider register --namespace Microsoft.Compute"
+    echo ""
+    echo "   # Step 2: Wait for registration (check status)"
+    echo "   az feature show --namespace Microsoft.Compute --name EncryptionAtHost --query properties.state"
+    echo ""
+    echo "   # Step 3: Re-register the provider to propagate the feature"
+    echo "   az provider register --namespace Microsoft.Compute --wait"
     echo ""
 fi
 
-if [ ${#MISSING_PROVIDERS[@]} -eq 0 ] && [ ${#UNREGISTERED_PROVIDERS[@]} -eq 0 ]; then
+if [ ${#MISSING_PROVIDERS[@]} -eq 0 ] && [ ${#UNREGISTERED_PROVIDERS[@]} -eq 0 ] && [ "$encryption_feature_missing" == "false" ]; then
     echo -e "${GREEN}🎉 Ready to deploy!${NC}"
-    echo "   Run: azd up --environment dev"
+    echo "   Run: azd provision"
     exit 0
 else
-    echo -e "${YELLOW}⚠️  Complete provider registration before deployment${NC}"
+    echo -e "${YELLOW}⚠️  Complete provider/feature registration before deployment${NC}"
     exit 1
 fi

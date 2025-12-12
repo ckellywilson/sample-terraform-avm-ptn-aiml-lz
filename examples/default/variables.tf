@@ -57,3 +57,13 @@ are in place when using this option.
 `flag_platform_landing_zone = false`, no route tables are created regardless of this setting.
 DESCRIPTION
 }
+
+variable "enable_spoke_dns_links" {
+  type        = bool
+  default     = false
+  description = <<DESCRIPTION
+Enable DNS zone links to spoke VNet. 
+Set to false for initial deployment (Phase 1), then true for subsequent applies (Phase 2).
+In CI/CD, use two separate terraform apply runs with different values.
+DESCRIPTION
+}

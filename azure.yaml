@@ -7,20 +7,93 @@ infra:
   path: examples/default
   terraform:
     version: ">=1.5.0"
-    backendConfig:
-      - backend.tfvars
 hooks:
   preprovision:
     posix:
       shell: sh
       run: |
-        ./scripts/check-prerequisites.sh || echo "Prerequisites check script completed (non-blocking)."
-        ./scripts/ensure-remote-state.sh
+        cd "$PROJECT_DIR" && ./examples/scripts/check-prerequisites.sh || echo "Prerequisites check script completed (non-blocking)."
     windows:
       shell: pwsh
       run: |
         Write-Host "(Optional) add Windows prerequisite checks here"
-        Write-Host "Remote state setup not yet implemented for Windows"
+  postprovision:
+    posix:
+      shell: sh
+      run: |
+        echo ""
+        echo "=========================================="
+        echo "Phase 1 deployment completed successfully!"
+        echo "=========================================="
+        echo ""
+        echo "⚠️  DNS Zone Linking Required (Phase 2)"
+        echo ""
+        echo "The hub DNS zones are currently linked to the hub VNet only."
+        echo "To enable DNS resolution from the hub to spoke resources,"
+        echo "a second Terraform apply is required to link DNS zones to the spoke VNet."
+        echo ""
+        echo "Running Phase 2 deployment now..."
+        echo ""
+        cd examples/default
+        terraform plan -out=phase2.tfplan
+        if [ $? -eq 0 ]; then
+          echo ""
+          echo "Applying Phase 2 changes (DNS zone links)..."
+          terraform apply phase2.tfplan
+          rm -f phase2.tfplan
+          echo ""
+          echo "=========================================="
+          echo "✅ Phase 2 deployment completed!"
+          echo "=========================================="
+          echo ""
+          echo "DNS resolution should now work from the hub jump VM to spoke private endpoints."
+          echo ""
+        else
+          echo ""
+          echo "⚠️  Phase 2 plan failed. You may need to run it manually:"
+          echo "   cd examples/default"
+          echo "   terraform plan"
+          echo "   terraform apply"
+          echo ""
+        fi
+    windows:
+      shell: pwsh
+      run: |
+        Write-Host ""
+        Write-Host "=========================================="
+        Write-Host "Phase 1 deployment completed successfully!"
+        Write-Host "=========================================="
+        Write-Host ""
+        Write-Host "⚠️  DNS Zone Linking Required (Phase 2)"
+        Write-Host ""
+        Write-Host "The hub DNS zones are currently linked to the hub VNet only."
+        Write-Host "To enable DNS resolution from the hub to spoke resources,"
+        Write-Host "a second Terraform apply is required."
+        Write-Host ""
+        Write-Host "Running Phase 2 deployment now..."
+        Write-Host ""
+        Set-Location examples/default
+        terraform plan -out=phase2.tfplan
+        if ($LASTEXITCODE -eq 0) {
+          Write-Host ""
+          Write-Host "Applying Phase 2 changes (DNS zone links)..."
+          terraform apply phase2.tfplan
+          Remove-Item phase2.tfplan -ErrorAction SilentlyContinue
+          Write-Host ""
+          Write-Host "=========================================="
+          Write-Host "✅ Phase 2 deployment completed!"
+          Write-Host "=========================================="
+          Write-Host ""
+          Write-Host "DNS resolution should now work from the hub jump VM to spoke private endpoints."
+          Write-Host ""
+        } else {
+          Write-Host ""
+          Write-Host "⚠️  Phase 2 plan failed. You may need to run it manually:"
+          Write-Host "   cd examples/default"
+          Write-Host "   terraform plan"
+          Write-Host "   terraform apply"
+          Write-Host ""
+        }
   postdown:
     posix:
       shell: sh
@@ -38,5 +111,10 @@ hooks:
         Write-Host "⚠️  Note: Terraform state storage (tfstate-rg-aiml-lz) was NOT deleted."
         Write-Host "   To manually delete: az group delete --name tfstate-rg-aiml-lz --yes"
         Write-Host ""
+# Pipeline configuration for GitHub Actions integration
+# This enables azd to reference GitHub Environment as single source of truth
+pipeline:
+  provider: github
+  environment: default  # References GitHub Environment: Settings → Environments → default
 # Services list is empty because this sample currently provisions only infrastructure.
 services: {}
