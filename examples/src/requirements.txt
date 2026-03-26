@@ -7,7 +7,7 @@ azure-keyvault-secrets==4.10.0
 azure-cosmos==4.14.2
 azure-storage-blob==12.27.1
 openai==2.8.0
-requests==2.32.5
+requests==2.33.0
 jinja2==3.1.6
 python-multipart==0.0.20
 aiofiles==25.1.0
